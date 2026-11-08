@@ -129,6 +129,8 @@ button:disabled{opacity:.55;cursor:default}
         <b>Résultat</b>
         <label>Débit<span class="unit"><input data-k="debitPropose" inputmode="decimal"><span>l/s</span></span></label>
         <label>À la profondeur<span class="unit"><input data-k="profPropose" inputmode="decimal"><span>m</span></span></label>
+        <button class="primary" data-act="calc" type="button" style="grid-column:1/-1">Calculer le résultat</button>
+        <p class="hint" data-calcmsg style="grid-column:1/-1;margin:0"></p>
         <p class="hint" style="grid-column:1/-1">Débit vide = calcul auto : (débit test ÷ rabattement) × (profondeur pompe − 10 m − niveau statique) × 0,9</p>
       </div>
     </div>
@@ -195,6 +197,18 @@ function renderForages(){
     });
     autoRab(node,f);
     node.querySelector('[data-act=dup]').onclick=()=>{const c=JSON.parse(JSON.stringify(f));c.nom='FORAGE '+String(state.forages.length+1).padStart(2,'0');state.forages.splice(i+1,0,c);save();renderForages()};
+    node.querySelector('[data-act=calc]').onclick=()=>{
+      const msg=node.querySelector('[data-calcmsg]'),n=x=>parseFloat(String(x??'').replace(',','.'));
+      const miss=[];if(!isFinite(n(f.statique)))miss.push('niveau statique');if(!isFinite(n(f.dynamique))&&!isFinite(n(f.rabattement)))miss.push('niveau dynamique');if(!isFinite(n(f.debitTest)))miss.push('débit de test');
+      if(!isFinite(n(f.profPropose))){if(isFinite(n(f.profondeur))){f.profPropose=fmt(n(f.profondeur)-20)}else miss.push('profondeur pompe (ou du puits)')}
+      if(miss.length){msg.style.color='var(--warn)';msg.textContent='Manque : '+miss.join(', ')+'.';return}
+      if(!v(f.rabattement)){const s=n(f.dynamique)-n(f.statique);if(isFinite(s))f.rabattement=fmt(s)}
+      const q=autoDebit(f);
+      if(!q){msg.style.color='var(--warn)';msg.textContent='Calcul impossible : la pompe doit être à plus de 10 m sous le niveau statique.';return}
+      f.debitPropose=q;save();
+      ['rabattement','profPropose','debitPropose'].forEach(k=>{node.querySelector('[data-k='+k+']').value=f[k]||''});
+      msg.style.color='var(--ok)';msg.textContent='Résultat : '+q+' l/s à '+f.profPropose+' m';
+    };
     const del=node.querySelector('[data-act=del]');
     del.disabled=state.forages.length<2;
     del.onclick=()=>{
