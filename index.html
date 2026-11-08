@@ -139,7 +139,7 @@ button:disabled{opacity:.55;cursor:default}
         <button data-act="reset" type="button" style="grid-column:1/-1">↺ Remettre tous les calculs en auto</button>
         <details class="hint" style="grid-column:1/-1"><summary>Règles de calcul</summary>
           <p>Valeurs en <i style="color:var(--brand-deep)">bleu italique</i> = calculées. Tape une valeur pour la remplacer ; efface-la pour revenir au calcul.</p>
-          <p>• Rabattement s = ND − NS<br>• Débit spécifique q = Q test ÷ s<br>• Profondeur pompe = profondeur puits − marge au fond (15 % de la profondeur, entre 5 et 20 m)<br>• Eau au-dessus de la pompe = 25 % de la colonne (pompe − NS), entre 3 et 10 m<br>• Débit = q × (prof. pompe − eau au-dessus − NS) × 0,9, plafonné à 1,3 × Q test, arrondi au 0,5 l/s inférieur<br>• ND prévu = NS + Q ÷ (q × 0,9)<br>• HMT = ND prévu + 10 m (pertes + refoulement)<br>• Puissance = 9,81 × Q × HMT ÷ (1000 × 0,6), en kW → HP standard supérieur<br>• Tension : 230 V jusqu'à 2 HP, sinon 380 V</p>
+          <p>• Rabattement s = ND − NS<br>• Débit spécifique q = Q test ÷ s<br>• Profondeur pompe = profondeur puits − marge au fond (15 % de la profondeur, entre 2 et 20 m, sans dépasser 30 % de la colonne d’eau)<br>• Eau au-dessus de la pompe = 25 % de la colonne (pompe − NS), entre 1 et 10 m<br>• Débit = q × (prof. pompe − eau au-dessus − NS) × 0,9, plafonné à 1,3 × Q test, arrondi au 0,5 l/s inférieur (0,1 l/s sous 2 l/s)<br>• ND prévu = NS + Q ÷ (q × 0,9)<br>• HMT = ND prévu + 10 m (pertes + refoulement)<br>• Puissance = 9,81 × Q × HMT ÷ (1000 × 0,6), en kW → HP standard supérieur<br>• Tension : 230 V jusqu'à 2 HP, sinon 380 V</p>
         </details>
       </div>
     </div>
@@ -219,13 +219,19 @@ function renderForages(){
   });
 }
 const AUTOK=['rabattement','profPropose','debitPropose','puisConseil','tensConseil'];
-const HPS=[0.5,0.75,1,1.5,2,3,4,5.5,7.5,10,12.5,15,20,25,30,40,50];
+const HPS=[0.5,0.75,1,1.5,2,3,4,5.5,7.5,10,12.5,15,20,25,30,40,50,60,75,100,125,150,175,200,250,300];
 const nn=x=>parseFloat(String(x??'').replace(',','.'));
 const man=x=>String(x??'').trim()!=='';
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 // Marge au fond : 15 % de la profondeur, entre 5 et 20 m. Eau au-dessus de la pompe : 25 % de la colonne, entre 3 et 10 m
-const margeFond=P=>clamp(0.15*P,5,20);
-const submersion=(PP,S)=>clamp(0.25*(PP-S),3,10);
+const margeFond=P=>clamp(0.15*P,2,20);
+const submersion=(PP,S)=>clamp(0.25*(PP-S),1,10);
+// Profondeur de pompe : au-dessus du fond (15 % de P, 2 à 20 m) sans jamais prendre plus de 30 % de la colonne d'eau
+function pumpDepth(P,S){
+  if(!isFinite(P)||P<=0)return NaN;
+  let m=margeFond(P);if(isFinite(S)&&S<P)m=Math.min(m,0.3*(P-S));
+  const x=P-m;return P>=100?Math.floor(x/5)*5:Math.floor(x);
+}
 // Calculs hydrauliques : renvoie les valeurs auto + les valeurs effectives (saisie si modifiée, sinon auto)
 function calc(f){
   const S=nn(f.statique),D=nn(f.dynamique),Q=nn(f.debitTest),P=nn(f.profondeur),ok=isFinite;
@@ -233,10 +239,9 @@ function calc(f){
   out.rabattement=(ok(S)&&ok(D)&&D>S)?fmt(D-S):'';
   const s=man(f.rabattement)?nn(f.rabattement):nn(out.rabattement);
   const q=(ok(Q)&&Q>0&&s>0)?Q/s:NaN; info.q=q;
-  out.profPropose=(ok(P)&&P>5)?fmt(P>=40?Math.floor((P-margeFond(P))/5)*5:Math.floor(P-margeFond(P))):'';
-  if(ok(P)&&P>=40&&ok(S)&&nn(out.profPropose)-S<8)out.profPropose=fmt(Math.floor(P-margeFond(P)));
+  {const pd=pumpDepth(P,S);out.profPropose=(isFinite(pd)&&pd>0)?fmt(pd):''}
   const PP=man(f.profPropose)?nn(f.profPropose):nn(out.profPropose);
-  if(ok(q)&&ok(PP)&&ok(S)&&PP-submersion(PP,S)-S>0){const r=Math.floor(Math.min(q*(PP-submersion(PP,S)-S)*0.9,1.3*Q)*2)/2;out.debitPropose=r>0?fmt(r):''}else out.debitPropose='';
+  if(ok(q)&&ok(PP)&&ok(S)&&PP-submersion(PP,S)-S>0){const raw=Math.min(q*(PP-submersion(PP,S)-S)*0.9,1.3*Q),r=raw<2?Math.floor(raw*10)/10:Math.floor(raw*2)/2;out.debitPropose=r>0?fmt(r):''}else out.debitPropose='';
   info.noDebit=ok(q)&&ok(PP)&&ok(S)&&!out.debitPropose;
   const Qp=man(f.debitPropose)?nn(f.debitPropose):nn(out.debitPropose);
   if(ok(Qp)&&Qp>0&&ok(q)&&ok(S)){
@@ -253,7 +258,7 @@ function calc(f){
 // Suggestions avant essai (grisées, jamais dans le PDF)
 function suggest(f){
   const P=nn(f.profondeur),Dm=nn(f.diametre),S=nn(f.statique),ok=isFinite,r={};
-  if(ok(P)&&P>20){let im=Math.floor((P-15)/5)*5;if(ok(S)&&im<S+10)im=Math.min(P-5,S+10);r.imm=im}
+  {const im=pumpDepth(P,S);if(isFinite(im)&&im>0)r.imm=im}
   const imm=ok(nn(f.immersion))?nn(f.immersion):r.imm;
   let Q=nn(f.debitTest);
   if(!ok(Q)&&ok(Dm))Q=Dm<120?1.5:Dm<150?3:Dm<200?5:8;
@@ -303,8 +308,8 @@ function checkForage(f){
   if(ok(P)&&ok(I)&&I>=P)E.push('immersion ('+fmt(I)+' m) plus profonde que le puits ('+fmt(P)+' m)');
   if(ok(I)&&ok(D)&&I<=D)E.push('pompe de test ('+fmt(I)+' m) hors de l’eau : elle doit être sous le niveau dynamique ('+fmt(D)+' m)');
   if(ok(R)&&ok(S)&&ok(D)&&Math.abs(R-(D-S))>0.5)E.push('rabattement saisi '+fmt(R)+' m, alors que dynamique − statique = '+fmt(D-S)+' m');
-  if(ok(P)&&ok(PP)&&PP>P-5)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) trop proche du fond ou plus bas que le puits ('+fmt(P)+' m) : 5 m au-dessus du fond minimum');
-  if(ok(S)&&ok(PP)&&PP<=S+4)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) : il faut au moins 4 m sous le niveau statique ('+fmt(S)+' m)');
+  if(ok(P)&&ok(PP)&&PP>P-1)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) au fond ou plus bas que le puits ('+fmt(P)+' m)');
+  if(ok(S)&&ok(PP)&&PP<S+2)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) : il faut au moins 2 m sous le niveau statique ('+fmt(S)+' m)');
   return E;
 }
 function fmt(n){return (Math.round(n*100)/100).toString().replace('.',',')}
@@ -486,6 +491,7 @@ $('btnSend').onclick=async()=>{
 };
 
 bindTop();renderForages();
+window.__sogei={calc,checkForage,suggest};
 })();
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
