@@ -125,7 +125,7 @@ button:disabled{opacity:.55;cursor:default}
       <label>Rabattement<span class="unit"><input data-k="rabattement" inputmode="decimal"><span>m</span></span></label>
       <label>Temps d'initialisation<span class="unit"><input data-k="tempsInit" inputmode="decimal"><span>mn</span></span></label>
       <div class="result">
-        <b>Débit proposé suivant notre étude</b>
+        <b>Résultat</b>
         <label>Débit<span class="unit"><input data-k="debitPropose" inputmode="decimal"><span>l/s</span></span></label>
         <label>À la profondeur<span class="unit"><input data-k="profPropose" inputmode="decimal"><span>m</span></span></label>
       </div>
@@ -296,7 +296,7 @@ async function buildPdf(){
     if(prop){
       if(y>BOTTOM)newPage();
       arrow(104,y-4);
-      const lab='Débit proposé suivant notre étude :  ';
+      const lab='Résultat :  ';
       text(lab,XT,y,reg,12,ink);
       const px=XT+reg.widthOfTextAtSize(safe(lab),12),pw=bold.widthOfTextAtSize(safe(prop),11);
       text(prop,px,y,bold,11,ink);
