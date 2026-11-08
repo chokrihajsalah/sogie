@@ -202,6 +202,8 @@ function renderForages(){
       const miss=[];if(!isFinite(n(f.statique)))miss.push('niveau statique');if(!isFinite(n(f.dynamique))&&!isFinite(n(f.rabattement)))miss.push('niveau dynamique');if(!isFinite(n(f.debitTest)))miss.push('débit de test');
       if(!isFinite(n(f.profPropose))){if(isFinite(n(f.profondeur))){f.profPropose=fmt(n(f.profondeur)-20)}else miss.push('profondeur pompe (ou du puits)')}
       if(miss.length){msg.style.color='var(--warn)';msg.textContent='Manque : '+miss.join(', ')+'.';return}
+      const err=checkForage(f);
+      if(err.length){msg.style.color='var(--warn)';msg.innerHTML='Valeurs incohérentes, à corriger :<br>• '+err.join('<br>• ');return}
       if(!v(f.rabattement)){const s=n(f.dynamique)-n(f.statique);if(isFinite(s))f.rabattement=fmt(s)}
       const q=autoDebit(f);
       if(!q){msg.style.color='var(--warn)';msg.textContent='Calcul impossible : la pompe doit être à plus de 10 m sous le niveau statique.';return}
@@ -225,6 +227,21 @@ function autoRab(node,f){
   r.placeholder=(isFinite(s)&&isFinite(d))?('auto : '+fmt(d-s)):'';
   const q=autoDebit(f),dp=node.querySelector('[data-k=debitPropose]');
   dp.placeholder=q?('auto : '+q):'';
+}
+// Contrôles de cohérence avant calcul
+function checkForage(f){
+  const n=x=>parseFloat(String(x??'').replace(',','.'));
+  const P=n(f.profondeur),S=n(f.statique),D=n(f.dynamique),I=n(f.immersion),R=n(f.rabattement),PP=n(f.profPropose),E=[];
+  const ok=x=>isFinite(x);
+  if(ok(P)&&ok(S)&&S>=P)E.push('niveau statique ('+fmt(S)+' m) plus profond que le puits ('+fmt(P)+' m)');
+  if(ok(P)&&ok(D)&&D>=P)E.push('niveau dynamique ('+fmt(D)+' m) plus profond que le puits ('+fmt(P)+' m)');
+  if(ok(S)&&ok(D)&&D<=S)E.push('niveau dynamique ('+fmt(D)+' m) doit être plus bas que le statique ('+fmt(S)+' m)');
+  if(ok(P)&&ok(I)&&I>=P)E.push('immersion ('+fmt(I)+' m) plus profonde que le puits ('+fmt(P)+' m)');
+  if(ok(I)&&ok(D)&&I<=D)E.push('pompe de test ('+fmt(I)+' m) hors de l’eau : elle doit être sous le niveau dynamique ('+fmt(D)+' m)');
+  if(ok(R)&&ok(S)&&ok(D)&&Math.abs(R-(D-S))>0.5)E.push('rabattement saisi '+fmt(R)+' m, alors que dynamique − statique = '+fmt(D-S)+' m');
+  if(ok(P)&&ok(PP)&&PP>P-5)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) trop proche du fond ou plus bas que le puits ('+fmt(P)+' m) : 5 m au-dessus du fond minimum');
+  if(ok(S)&&ok(PP)&&PP<=S+10)E.push('profondeur de pompe proposée ('+fmt(PP)+' m) : il faut au moins 10 m sous le niveau statique ('+fmt(S)+' m)');
+  return E;
 }
 // Débit proposé = (Qtest ÷ rabattement) × (profondeur pompe − 10 m − NS) × 0,9, arrondi au 0,5 l/s inférieur
 function autoDebit(f){
