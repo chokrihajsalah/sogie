@@ -123,6 +123,7 @@ button:disabled{opacity:.55;cursor:default}
       <label>Niveau dynamique<span class="unit"><input data-k="dynamique" inputmode="decimal"><span>m</span></span></label>
       <label>Puissance pompe (test)<select data-k="puissance"><option value="">—</option><option value="0.5">0,5 HP</option><option value="0.75">0,75 HP</option><option value="1">1 HP</option><option value="1.5">1,5 HP</option><option value="2">2 HP</option><option value="3">3 HP</option><option value="4">4 HP</option><option value="5.5">5,5 HP</option><option value="7.5">7,5 HP</option><option value="10">10 HP</option><option value="12.5">12,5 HP</option><option value="15">15 HP</option><option value="20">20 HP</option><option value="25">25 HP</option><option value="30">30 HP</option><option value="40">40 HP</option><option value="50">50 HP</option></select></label>
       <label>Tension<select data-k="tension"><option value="">—</option><option value="230">230 V (mono)</option><option value="380">380 V (tri)</option></select></label>
+      <p class="hint full" data-sugg style="margin:-4px 0 0"></p>
       <label>Immersion<span class="unit"><input data-k="immersion" inputmode="decimal"><span>m</span></span></label>
       <label>Débit de test<span class="unit"><input data-k="debitTest" inputmode="decimal"><span>l/s</span></span></label>
       <label>Rabattement<span class="unit"><input data-k="rabattement" inputmode="decimal"><span>m</span></span></label>
@@ -169,7 +170,7 @@ button:disabled{opacity:.55;cursor:default}
 const KEY='sogei-rapport-v1';
 const FIELDS=['nom','profondeur','diametre','statique','dynamique','pompe','immersion','debitTest','rabattement','tempsInit','debitPropose','profPropose'];
 const today=()=>new Date().toISOString().slice(0,10);
-const emptyForage=n=>({nom:'FORAGE '+String(n).padStart(2,'0'),profondeur:'',diametre:'200',statique:'',dynamique:'',puissance:'10',tension:'380',immersion:'',debitTest:'',rabattement:'',tempsInit:'',debitPropose:'',profPropose:'',puisConseil:'',tensConseil:''});
+const emptyForage=n=>({nom:'FORAGE '+String(n).padStart(2,'0'),profondeur:'',diametre:'200',statique:'',dynamique:'',puissance:'',tension:'',immersion:'',debitTest:'',rabattement:'',tempsInit:'',debitPropose:'',profPropose:'',puisConseil:'',tensConseil:''});
 // Exemple de départ : le rapport du 01/09/2023 (Moknasi / SOCOBAT)
 const SAMPLE={adresse:'Moknasi',client:'SOCOBAT',date:'2023-09-01',signataire:'KHALED GRAYRI',fonction:'Gérant',cachet:true,forages:[
  {nom:'FORAGE 01',profondeur:'120',diametre:'200',statique:'55',dynamique:'80',puissance:'10',tension:'380',immersion:'90',debitTest:'6',rabattement:'',tempsInit:'8',debitPropose:'',profPropose:'100'},
@@ -243,8 +244,26 @@ function calc(f){
   info.Qp=Qp;info.PP=PP;info.Q=Q;info.hpC=hpC;
   return {out,eff,info};
 }
+// Suggestions avant essai (grisées, jamais dans le PDF)
+function suggest(f){
+  const P=nn(f.profondeur),Dm=nn(f.diametre),S=nn(f.statique),ok=isFinite,r={};
+  if(ok(P)&&P>20){let im=Math.floor((P-15)/5)*5;if(ok(S)&&im<S+10)im=Math.min(P-5,S+10);r.imm=im}
+  const imm=ok(nn(f.immersion))?nn(f.immersion):r.imm;
+  let Q=nn(f.debitTest);
+  if(!ok(Q)&&ok(Dm))Q=Dm<120?1.5:Dm<150?3:Dm<200?5:8;
+  if(ok(Q)&&ok(imm)){
+    const H=(ok(nn(f.dynamique))?nn(f.dynamique):imm)+10,hp=9.81*Q*H/1000/0.6/0.746;
+    const pick=HPS.find(x=>x>=hp);
+    if(pick!==undefined){r.hp=pick;r.tens=pick<=2?'230':'380';r.Q=Q;r.H=H}
+  }
+  return r;
+}
 function refresh(node,f,typing){
   const {out,eff,info}=calc(f);
+  const sg=suggest(f),imEl=node.querySelector('[data-k=immersion]');
+  imEl.placeholder=sg.imm!==undefined?'conseillé : '+fmt(sg.imm):'';
+  const se=node.querySelector('[data-sugg]');
+  se.textContent=sg.hp!==undefined?('Pompe de test conseillée : '+fmt(sg.hp)+' HP / '+sg.tens+' V (pour '+fmt(sg.Q)+' l/s, HMT ≈ '+fmt(sg.H)+' m)'+((v(f.puissance)&&v(f.tension))?'':' — choisis la pompe réellement utilisée')):'';
   AUTOK.forEach(k=>{
     const el=node.querySelector('[data-k='+k+']');if(!el||el===typing)return;
     const val=man(f[k])?f[k]:out[k];
