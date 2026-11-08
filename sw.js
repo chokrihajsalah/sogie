@@ -1,4 +1,4 @@
-const C='sogei-v2';
+const C='sogei-v3';
 const LOCAL=['./','index.html','manifest.json','icon-192.png','icon-512.png'];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(async c=>{await c.addAll(LOCAL);for(const u of CDN){try{await c.add(new Request(u,{mode:'no-cors'}))}catch(_){}}}).then(()=>self.skipWaiting())));
