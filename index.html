@@ -346,19 +346,19 @@ function tel(x){return v(x).replace(/(?<![\d+])(\+?\d[\d .-]{6,}\d)(?!\d)/g,m=>{
 function m3h(ls){const q=parseFloat(String(ls).replace(',','.'));return isFinite(q)&&q>0?' ('+(Math.round(q*36)/10).toString().replace('.',',')+' m3/h)':''}
 function forageLines(f){
   const L=[];
-  const add=(cond,t)=>{if(cond)L.push(t)};
-  add(v(f.profondeur),'Profondeur du forage : '+num(f.profondeur)+' m');
-  add(v(f.diametre),'Diamètre du tubage : '+num(f.diametre)+' mm');
-  add(v(f.statique),'Niveau statique (/sol) : '+num(f.statique)+' m');
+  const add=(cond,l,t)=>{if(cond)L.push([l,t])};
+  add(v(f.profondeur),'Profondeur du forage',num(f.profondeur)+' m');
+  add(v(f.diametre),'Diamètre du tubage',num(f.diametre)+' mm');
+  add(v(f.statique),'Niveau statique (/sol)',num(f.statique)+' m');
   const pp=[v(f.puissance)?v(f.puissance).replace('.',',')+' HP':'',v(f.tension)?v(f.tension)+' V':''].filter(Boolean).join(' / ');
-  add(pp,'Pompe d’essai : '+pp);
-  add(v(f.immersion),'Immersion : '+num(f.immersion)+' m');
-  add(v(f.dynamique),'Niveau dynamique (/sol) : '+num(f.dynamique)+' m');
-  add(v(f.debitTest),'Débit d’essai : '+num(f.debitTest)+' l/s'+m3h(f.debitTest));
+  add(pp,'Pompe d’essai',pp);
+  add(v(f.immersion),'Immersion',num(f.immersion)+' m');
+  add(v(f.dynamique),'Niveau dynamique (/sol)',num(f.dynamique)+' m');
+  add(v(f.debitTest),'Débit d’essai',num(f.debitTest)+' l/s'+m3h(f.debitTest));
   const {eff}=calc(f);
   let rab=eff.rabattement;
-  add(rab,'Rabattement : '+num(rab)+' m');
-  add(v(f.tempsInit),'Durée de stabilisation : '+num(f.tempsInit)+' min');
+  add(rab,'Rabattement',num(rab)+' m');
+  add(v(f.tempsInit),'Durée de stabilisation',num(f.tempsInit)+' min');
   let prop='';
   if(eff.debitPropose)prop=eff.debitPropose+' l/s'+m3h(eff.debitPropose)+(eff.profPropose?' à '+eff.profPropose+' m':'');
   const conseil=[eff.puisConseil?eff.puisConseil.replace('.',',')+' HP':'',eff.tensConseil?eff.tensConseil+' V':''].filter(Boolean).join(' / ');
@@ -391,47 +391,54 @@ async function buildPdf(){
   });
   y+=20;
 
-  const STEP=14;
-  const diamond=(cx,cy)=>{ // ❖
-    const d=2.1;[[0,-d*1.25],[d*1.25,0],[0,d*1.25],[-d*1.25,0]].forEach(([dx,dy])=>{
-      page.drawSvgPath(`M0 ${-d} L${d} 0 L0 ${d} L${-d} 0 Z`,{x:cx+dx,y:H-(cy+dy),color:ink});
-    });
-  };
-  const arrow=(cx,cy)=>{ // ➢
-    page.drawSvgPath('M0 -4.2 L8.5 0 L0 4.2 L2.4 0 Z',{x:cx-4,y:H-cy,color:ink});
-  };
+  // Style A : tableau + encadré résultats
+  const XL=X0,XR=548,TW=XR-XL,COL=XL+190,RH=19,FS=11.5;
+  const grey=rgb(.955,.96,.97),rule=rgb(.82,.84,.88),lightBlue=rgb(.92,.945,.985);
+  const rect=(x,yTop,w,h,o)=>page.drawRectangle(Object.assign({x,y:H-(yTop+h),width:w,height:h},o));
+  const hline=(yy,c,t)=>page.drawLine({start:{x:XL,y:H-yy},end:{x:XR,y:H-yy},thickness:t||.6,color:c||rule});
+  const wrap=(str,font,size,maxW)=>{const out=[];let line='';safe(str).split(/\s+/).filter(Boolean).forEach(w=>{const t=line?line+' '+w:w;if(font.widthOfTextAtSize(t,size)>maxW&&line){out.push(line);line=w}else line=t});if(line)out.push(line);return out};
 
   state.forages.forEach((f,fi)=>{
     const {L,prop,conseil}=forageLines(f);
-    const R=[['Débit d’exploitation conseillé :  ',prop],['Pompe conseillée :  ',conseil]].filter(r=>r[1]);
-    const need=20+(L.length+R.length)*STEP;
-    if(y+Math.min(need,120)>BOTTOM)newPage();
-    text(v(f.nom)||('FORAGE '+String(fi+1).padStart(2,'0')),X0,y,bold,12,black);
-    y+=23;
-    L.forEach(t=>{ if(y>BOTTOM)newPage(); diamond(104.5,y-4); text(t,XT,y,reg,12,ink); y+=STEP; });
-    R.forEach(([lab,val])=>{
-      if(y>BOTTOM)newPage();
-      arrow(104,y-4);
-      text(lab,XT,y,reg,12,ink);
-      const px=XT+reg.widthOfTextAtSize(safe(lab),12),pw=bold.widthOfTextAtSize(safe(val),11);
-      text(val,px,y,bold,11,ink);
-      page.drawLine({start:{x:px,y:H-(y+1.8)},end:{x:px+pw,y:H-(y+1.8)},thickness:.8,color:ink});
-      y+=STEP;
+    const RES=[['Débit d’exploitation conseillé',prop],['Pompe conseillée',conseil]].filter(r=>r[1]);
+    const obs=v(f.observations)?wrap(f.observations,reg,FS,XR-COL-10):[];
+    const resH=(RES.length||obs.length)?28+RES.length*RH+(obs.length?obs.length*14+2:0)+4:0;
+    const tabH=30+L.length*RH;
+    if(y+Math.min(tabH+resH+10,BOTTOM-TOP)>BOTTOM)newPage();
+    // Titre du forage
+    text(v(f.nom)||('FORAGE '+String(fi+1).padStart(2,'0')),XL,y,bold,13,blue);
+    hline(y+5,blue,1.2);
+    y+=13;
+    // Tableau des informations
+    L.forEach(([lab,val],k)=>{
+      if(y+RH>BOTTOM)newPage();
+      if(k%2===0)rect(XL,y,TW,RH,{color:grey});
+      text(lab,XL+8,y+13,reg,FS,ink);
+      text(val,COL,y+13,bold,FS,black);
+      y+=RH;hline(y);
     });
-    if(v(f.observations)){
-      if(y>BOTTOM)newPage();
-      arrow(104,y-4);
-      const lab='Observations : ';text(lab,XT,y,reg,12,ink);
-      const x1=XT+reg.widthOfTextAtSize(safe(lab),12),MAXX=548;
-      let line='',lx=x1;
-      safe(v(f.observations)).split(/\s+/).forEach(w=>{
-        const t=line?line+' '+w:w;
-        if(lx+reg.widthOfTextAtSize(t,12)>MAXX&&line){text(line,lx,y,reg,12,ink);y+=STEP;lx=XT;line=w;if(y>BOTTOM)newPage()}else line=t;
+    y+=12;
+    // Encadré résultats
+    if(resH){
+      if(y+resH>BOTTOM)newPage();
+      const top=y;
+      rect(XL,top,TW,resH,{color:lightBlue,borderColor:blue,borderWidth:1});
+      rect(XL,top,TW,20,{color:blue});
+      text('RÉSULTATS',XL+8,top+14,bold,11,rgb(1,1,1));
+      y=top+20;
+      RES.forEach(([lab,val])=>{
+        text(lab,XL+8,y+14,reg,FS,ink);
+        text(val,COL,y+14,bold,12,blue);
+        y+=RH;
       });
-      if(line)text(line,lx,y,reg,12,ink);
-      y+=STEP;
+      if(obs.length){
+        y+=4;
+        text('Observations',XL+8,y+10,reg,FS,ink);
+        obs.forEach(t=>{text(t,COL,y+10,reg,FS,ink);y+=14});
+      }
+      y=top+resH;
     }
-    y+=20;
+    y+=24;
   });
 
   // Signature
