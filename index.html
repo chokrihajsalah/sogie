@@ -36,8 +36,8 @@ label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mute
 .unit{position:relative;display:block}
 .unit input{padding-right:46px}
 .unit span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);pointer-events:none}
-select,input[type=text],input[type=date],input[type=number],input[type=tel],input[type=email],input:not([type]){width:100%;font:500 16px var(--body);color:var(--fg);background:var(--input);border:1px solid var(--line);border-radius:8px;padding:10px 11px;min-height:44px}
-input:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+select,input[type=text],input[type=date],input[type=number],input[type=tel],input[type=email],input:not([type]),textarea{width:100%;font:500 16px var(--body);color:var(--fg);background:var(--input);border:1px solid var(--line);border-radius:8px;padding:10px 11px;min-height:44px}
+input:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .check{flex-direction:row;align-items:center;gap:8px;font-size:15px;color:var(--fg)}
 .check input{width:20px;height:20px}
 .forage-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -78,7 +78,7 @@ button:disabled{opacity:.55;cursor:default}
       <label class="full">Adresse forage<input id="adresse" autocomplete="off"></label>
       <label class="full">Client<input id="client" autocomplete="off"></label>
       <label class="full">Contact client<input id="contact" autocomplete="off" placeholder="Téléphone, e-mail, nom…"></label>
-      <label>Date<input id="date" type="date"></label>
+      <label>Date de l'essai<input id="date" type="date"></label>
     </div>
   </section>
 
@@ -116,20 +116,21 @@ button:disabled{opacity:.55;cursor:default}
       <button class="ghost danger" data-act="del" type="button">Supprimer</button>
     </div>
     <div class="grid">
-      <label>Profondeur du puits<span class="unit"><input data-k="profondeur" inputmode="decimal"><span>m</span></span></label>
-      <label>Diamètre<span class="unit"><input data-k="diametre" inputmode="decimal"><span>mm</span></span></label>
-      <label>Niveau statique<span class="unit"><input data-k="statique" inputmode="decimal"><span>m</span></span></label>
-      <label>Niveau dynamique<span class="unit"><input data-k="dynamique" inputmode="decimal"><span>m</span></span></label>
-      <label>Puissance pompe (test)<select data-k="puissance"><option value="">—</option><option value="0.5">0,5 HP</option><option value="0.75">0,75 HP</option><option value="1">1 HP</option><option value="1.5">1,5 HP</option><option value="2">2 HP</option><option value="3">3 HP</option><option value="4">4 HP</option><option value="5.5">5,5 HP</option><option value="7.5">7,5 HP</option><option value="10">10 HP</option><option value="12.5">12,5 HP</option><option value="15">15 HP</option><option value="20">20 HP</option><option value="25">25 HP</option><option value="30">30 HP</option><option value="40">40 HP</option><option value="50">50 HP</option></select></label>
+      <label>Profondeur du forage<span class="unit"><input data-k="profondeur" inputmode="decimal"><span>m</span></span></label>
+      <label>Diamètre du tubage<span class="unit"><input data-k="diametre" inputmode="decimal"><span>mm</span></span></label>
+      <label>Niveau statique (/sol)<span class="unit"><input data-k="statique" inputmode="decimal"><span>m</span></span></label>
+      <label>Niveau dynamique (/sol)<span class="unit"><input data-k="dynamique" inputmode="decimal"><span>m</span></span></label>
+      <label>Pompe d'essai<select data-k="puissance"><option value="">—</option><option value="0.5">0,5 HP</option><option value="0.75">0,75 HP</option><option value="1">1 HP</option><option value="1.5">1,5 HP</option><option value="2">2 HP</option><option value="3">3 HP</option><option value="4">4 HP</option><option value="5.5">5,5 HP</option><option value="7.5">7,5 HP</option><option value="10">10 HP</option><option value="12.5">12,5 HP</option><option value="15">15 HP</option><option value="20">20 HP</option><option value="25">25 HP</option><option value="30">30 HP</option><option value="40">40 HP</option><option value="50">50 HP</option></select></label>
       <label>Tension<select data-k="tension"><option value="">—</option><option value="230">230 V (mono)</option><option value="380">380 V (tri)</option></select></label>
       <p class="hint full" data-sugg style="margin:-4px 0 0"></p>
       <label>Immersion<span class="unit"><input data-k="immersion" inputmode="decimal"><span>m</span></span></label>
-      <label>Débit de test<span class="unit"><input data-k="debitTest" inputmode="decimal"><span>l/s</span></span></label>
+      <label>Débit d'essai<span class="unit"><input data-k="debitTest" inputmode="decimal"><span>l/s</span></span></label>
       <label>Rabattement<span class="unit"><input data-k="rabattement" inputmode="decimal"><span>m</span></span></label>
-      <label>Temps d'initialisation<span class="unit"><input data-k="tempsInit" inputmode="decimal"><span>mn</span></span></label>
+      <label>Durée de stabilisation<span class="unit"><input data-k="tempsInit" inputmode="decimal"><span>min</span></span></label>
+      <label class="full">Observations (facultatif)<textarea data-k="observations" rows="2" placeholder="Sable, eau trouble, remarques…"></textarea></label>
       <div class="result">
         <b>Résultat — calculé automatiquement, modifiable</b>
-        <label>Débit<span class="unit"><input data-k="debitPropose" inputmode="decimal"><span>l/s</span></span></label>
+        <label>Débit d'exploitation conseillé<span class="unit"><input data-k="debitPropose" inputmode="decimal"><span>l/s</span></span></label>
         <label>À la profondeur<span class="unit"><input data-k="profPropose" inputmode="decimal"><span>m</span></span></label>
         <label>Pompe conseillée<select data-k="puisConseil"><option value="">—</option><option value="0.5">0,5 HP</option><option value="0.75">0,75 HP</option><option value="1">1 HP</option><option value="1.5">1,5 HP</option><option value="2">2 HP</option><option value="3">3 HP</option><option value="4">4 HP</option><option value="5.5">5,5 HP</option><option value="7.5">7,5 HP</option><option value="10">10 HP</option><option value="12.5">12,5 HP</option><option value="15">15 HP</option><option value="20">20 HP</option><option value="25">25 HP</option><option value="30">30 HP</option><option value="40">40 HP</option><option value="50">50 HP</option></select></label>
         <label>Tension conseillée<select data-k="tensConseil"><option value="">—</option><option value="230">230 V (mono)</option><option value="380">380 V (tri)</option></select></label>
@@ -169,7 +170,7 @@ button:disabled{opacity:.55;cursor:default}
 const KEY='sogei-rapport-v1';
 const FIELDS=['nom','profondeur','diametre','statique','dynamique','pompe','immersion','debitTest','rabattement','tempsInit','debitPropose','profPropose'];
 const today=()=>new Date().toISOString().slice(0,10);
-const emptyForage=n=>({nom:'FORAGE '+String(n).padStart(2,'0'),profondeur:'',diametre:'200',statique:'',dynamique:'',puissance:'',tension:'',immersion:'',debitTest:'',rabattement:'',tempsInit:'',debitPropose:'',profPropose:'',puisConseil:'',tensConseil:''});
+const emptyForage=n=>({nom:'FORAGE '+String(n).padStart(2,'0'),profondeur:'',diametre:'200',statique:'',dynamique:'',puissance:'',tension:'',immersion:'',debitTest:'',rabattement:'',tempsInit:'',debitPropose:'',profPropose:'',puisConseil:'',tensConseil:'',observations:''});
 // Exemple de départ : le rapport du 01/09/2023 (Moknasi / SOCOBAT)
 const SAMPLE={adresse:'Moknasi',client:'SOCOBAT',date:'2023-09-01',signataire:'KHALED GRAYRI',fonction:'Gérant',cachet:true,forages:[
  {nom:'FORAGE 01',profondeur:'120',diametre:'200',statique:'55',dynamique:'80',puissance:'10',tension:'380',immersion:'90',debitTest:'6',rabattement:'',tempsInit:'8',debitPropose:'',profPropose:'100'},
@@ -338,23 +339,28 @@ function frDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v(iso));return m?m
 // WinAnsi-safe text for standard PDF fonts
 const safe=s=>String(s).replace(/[‘’]/g,"’").replace(/[^\x20-\x7e -ÿ’€]/g,'');
 
+// Mise en forme : majuscules (adresse, client), téléphone groupé, conversion l/s → m³/h
+const PETITS=new Set(['en','de','du','des','la','le','les','et','à','au','aux','sur','d','l']);
+function titre(x){return v(x).split(/(\s+|-|')/).map((w,i)=>{if(!/\p{L}/u.test(w))return w;const lw=w.toLowerCase();if(i>0&&PETITS.has(lw))return w===w.toUpperCase()&&w.length>1?w:lw;return w===lw?w.charAt(0).toUpperCase()+w.slice(1):w}).join('')}
+function tel(x){return v(x).replace(/(?<![\d+])(\+?\d[\d .-]{6,}\d)(?!\d)/g,m=>{const d=m.replace(/\D/g,'');if(m.trim().startsWith('+'))return m;if(d.length===10)return d.replace(/(\d{2})(?=\d)/g,'$1 ');if(d.length===8)return d.replace(/(\d{2})(\d{3})(\d{3})/,'$1 $2 $3');return m})}
+function m3h(ls){const q=parseFloat(String(ls).replace(',','.'));return isFinite(q)&&q>0?' ('+(Math.round(q*36)/10).toString().replace('.',',')+' m3/h)':''}
 function forageLines(f){
   const L=[];
   const add=(cond,t)=>{if(cond)L.push(t)};
-  add(v(f.profondeur),'Profondeur du puits : '+num(f.profondeur)+' m');
-  add(v(f.diametre),'Diamètre : '+num(f.diametre)+' mm');
-  add(v(f.statique),'Niveau statique : '+num(f.statique)+' m');
+  add(v(f.profondeur),'Profondeur du forage : '+num(f.profondeur)+' m');
+  add(v(f.diametre),'Diamètre du tubage : '+num(f.diametre)+' mm');
+  add(v(f.statique),'Niveau statique (/sol) : '+num(f.statique)+' m');
   const pp=[v(f.puissance)?v(f.puissance).replace('.',',')+' HP':'',v(f.tension)?v(f.tension)+' V':''].filter(Boolean).join(' / ');
-  add(pp,'Pompe utilisée pour test : '+pp);
+  add(pp,'Pompe d’essai : '+pp);
   add(v(f.immersion),'Immersion : '+num(f.immersion)+' m');
-  add(v(f.dynamique),'Niveau dynamique : '+num(f.dynamique)+' m');
-  add(v(f.debitTest),'Débit de test : '+num(f.debitTest)+' l/s');
+  add(v(f.dynamique),'Niveau dynamique (/sol) : '+num(f.dynamique)+' m');
+  add(v(f.debitTest),'Débit d’essai : '+num(f.debitTest)+' l/s'+m3h(f.debitTest));
   const {eff}=calc(f);
   let rab=eff.rabattement;
   add(rab,'Rabattement : '+num(rab)+' m');
-  add(v(f.tempsInit),'Temps d’initialisation : '+num(f.tempsInit)+' mn');
+  add(v(f.tempsInit),'Durée de stabilisation : '+num(f.tempsInit)+' min');
   let prop='';
-  if(eff.debitPropose)prop=eff.debitPropose+' l/s'+(eff.profPropose?' à '+eff.profPropose+' m':'');
+  if(eff.debitPropose)prop=eff.debitPropose+' l/s'+m3h(eff.debitPropose)+(eff.profPropose?' à '+eff.profPropose+' m':'');
   const conseil=[eff.puisConseil?eff.puisConseil.replace('.',',')+' HP':'',eff.tensConseil?eff.tensConseil+' V':''].filter(Boolean).join(' / ');
   return {L,prop,conseil};
 }
@@ -380,7 +386,7 @@ async function buildPdf(){
   text(title,CX-tw/2,146,reg,ts,black);
   page.drawLine({start:{x:CX-tw/2,y:H-149.5},end:{x:CX+tw/2,y:H-149.5},thickness:1.3,color:black});
   y=176;
-  [['Adresse forage : ',state.adresse],['Client : ',state.client],['Contact : ',state.contact],['Date : ',frDate(state.date)]].forEach(([l,val])=>{
+  [['Adresse forage : ',titre(state.adresse)],['Client : ',titre(state.client)],['Contact : ',tel(state.contact)],['Date de l’essai : ',frDate(state.date)]].forEach(([l,val])=>{
     if(!v(val))return;text(l+v(val),X0,y,reg,12.5,blue);y+=18;
   });
   y+=20;
@@ -397,7 +403,7 @@ async function buildPdf(){
 
   state.forages.forEach((f,fi)=>{
     const {L,prop,conseil}=forageLines(f);
-    const R=[['Résultat :  ',prop],['Pompe conseillée :  ',conseil]].filter(r=>r[1]);
+    const R=[['Débit d’exploitation conseillé :  ',prop],['Pompe conseillée :  ',conseil]].filter(r=>r[1]);
     const need=20+(L.length+R.length)*STEP;
     if(y+Math.min(need,120)>BOTTOM)newPage();
     text(v(f.nom)||('FORAGE '+String(fi+1).padStart(2,'0')),X0,y,bold,12,black);
@@ -412,15 +418,28 @@ async function buildPdf(){
       page.drawLine({start:{x:px,y:H-(y+1.8)},end:{x:px+pw,y:H-(y+1.8)},thickness:.8,color:ink});
       y+=STEP;
     });
+    if(v(f.observations)){
+      if(y>BOTTOM)newPage();
+      arrow(104,y-4);
+      const lab='Observations : ';text(lab,XT,y,reg,12,ink);
+      const x1=XT+reg.widthOfTextAtSize(safe(lab),12),MAXX=548;
+      let line='',lx=x1;
+      safe(v(f.observations)).split(/\s+/).forEach(w=>{
+        const t=line?line+' '+w:w;
+        if(lx+reg.widthOfTextAtSize(t,12)>MAXX&&line){text(line,lx,y,reg,12,ink);y+=STEP;lx=XT;line=w;if(y>BOTTOM)newPage()}else line=t;
+      });
+      if(line)text(line,lx,y,reg,12,ink);
+      y+=STEP;
+    }
     y+=20;
   });
 
   // Signature
-  const sigH=state.cachet!==false?130:50;
+  const sigH=state.cachet!==false?145:65;
   if(y+28+sigH>776)newPage();
   let sy=y+28;
   const SX=448;
-  ["Sté générale d'équipement hydro-elec",v(state.signataire),v(state.fonction)].forEach(t=>{
+  ["Sté Générale d'Équipement","Hydraulique et Électrique",v(state.signataire),v(state.fonction)].forEach(t=>{
     if(!t)return;const w=bold.widthOfTextAtSize(safe(t),11.5);text(t,SX-w/2,sy,bold,11.5,black);sy+=15;
   });
   if(state.cachet!==false){
