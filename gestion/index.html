@@ -91,6 +91,7 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
 .chips button{min-height:36px;border-radius:20px;font-size:14px;white-space:nowrap}
 .chips button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+#rapFrame{position:fixed;left:0;right:0;top:calc(56px + env(safe-area-inset-top,0px));width:100%;height:calc(100vh - 114px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - 114px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border:0;background:var(--bg);z-index:4}
 @media (max-width:370px){.grid{grid-template-columns:1fr}.line{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -261,10 +262,11 @@ const routes=[
   [/^#\/plus$/,plus],
   [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
   [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],
-  [/^#\/caisse$/,caisse],[/^#\/params$/,params]
+  [/^#\/caisse$/,caisse],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
 ];
 function route(){
   const h=(location.hash||'#/').split('?')[0];
+  clearInterval(rapTimer);if(!/^#\/rapport\//.test(h))rapLeave();
   for(const [re,fn] of routes){const m=re.exec(h);if(m){V.innerHTML='';scrollTo(0,0);fn(...m.slice(1));return}}
   go('#/');
 }
@@ -352,7 +354,7 @@ const STATUTS=[['afaire','À faire','amber'],['encours','En cours','tag'],['term
 const typeL=k=>(TYPES.find(t=>t[0]===k)||[,k||''])[1];
 const statT=k=>{const s=STATUTS.find(t=>t[0]===k)||STATUTS[0];return `<span class="tag ${s[2]==='tag'?'':s[2]}">${s[1]}</span>`};
 function interItem(i){const c=byId('clients',i.clientId);const f=i.factureId&&byId('docs',i.factureId);
-  return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(cName(i))}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}</div></a>`}
+  return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(cName(i))}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}${rapFait(i)?'<small>📄 rapport</small>':''}</div></a>`}
 let interFilter='actives';
 function interventions(){
   tab('interventions');setHead('Chantiers',{act:'<button class="small" onclick="location.hash=\'#/inter/new\'">+ Nouveau</button>'});
@@ -381,7 +383,7 @@ function interEdit(id){
   V.innerHTML=`<div class="card">${fields(SPEC,i)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
   <div class="card"><h2>Équipe sur place</h2>${emps.length?`<div class="chips" id="E" style="flex-wrap:wrap">${emps.map(e=>`<button data-e="${e.id}" class="${(i.employes||[]).includes(e.id)?'on':''}">${esc(e.nom)}</button>`).join('')}</div>`:'<p class="hint">Ajoutez vos salariés dans Plus → Équipe.</p>'}</div>
   ${isNew?'':`<div class="card"><h2>Suite</h2>
-    ${i.type==='essai'?'<a class="btn" href="../" target="_blank" rel="noopener">📄 Ouvrir le rapport d\'essai de débit</a>':''}
+    <a class="btn${i.type==='essai'?' primary':''}" href="#/rapport/${i.id}">📄 Rapport d'essai de débit${rapFait(i)?' ✓':''}</a>
     ${f?`<a class="btn" href="#/doc/${f.id}">🧾 Voir la facture ${esc(f.num)}</a>`:`<div class="row"><button class="grow" id="mkDevis">Faire un devis</button><button class="grow primary" id="mkFact">Facturer</button></div>`}
   </div>`}
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
@@ -596,6 +598,48 @@ async function sharePdf(d){
   catch(e){console.error(e);toast('Erreur PDF : '+e.message)}
 }
 
+/* ---------- Rapport d'essai (même appli, rapport par chantier) ---------- */
+const RKEY='sogei-rapport-v1';
+let rapTimer=null;
+const rapFait=i=>!!(i&&i.rapport&&(i.rapport.forages||[]).some(f=>f.profondeur||f.statique||f.debitTest));
+const blankForage=()=>({nom:'FORAGE 01',profondeur:'',diametre:'200',statique:'',dynamique:'',puissance:'',tension:'',immersion:'',debitTest:'',rabattement:'',tempsInit:'',debitPropose:'',profPropose:'',puisConseil:'',tensConseil:'',observations:''});
+// Enregistre ce qui est dans le rapport ouvert vers son propriétaire (chantier ou rapport libre)
+function rapCapture(){
+  const ctx=S.rapportCtx;if(!ctx)return;
+  let r=null;try{r=JSON.parse(localStorage.getItem(RKEY))}catch(e){}
+  if(!r)return;
+  if(ctx==='libre')S.rapportLibre=r;else{const i=byId('interventions',ctx);if(i)i.rapport=r}
+  save();
+}
+// En quittant un rapport : on l'enregistre, puis on remet le rapport libre en place
+function rapLeave(){
+  if(!S.rapportCtx)return;rapCapture();
+  if(S.rapportCtx!=='libre'){try{if(S.rapportLibre)localStorage.setItem(RKEY,JSON.stringify(S.rapportLibre));else localStorage.removeItem(RKEY)}catch(e){}}
+  S.rapportCtx=null;save();
+}
+function rapport(id){
+  const inter=id==='libre'?null:byId('interventions',id);
+  if(id!=='libre'&&!inter)return go('#/interventions');
+  tab(inter?'interventions':'plus');
+  setHead(inter?'Rapport — '+cName(inter):"Rapport d'essai",{back:inter?'#/inter/'+id:'#/plus'});
+  rapCapture();
+  let data;
+  if(inter){
+    data=inter.rapport;
+    if(!data){const c=byId('clients',inter.clientId)||{},isP=inter.clientId==='passager';
+      data={adresse:[inter.lieu,isP?'':c.adresse].filter(Boolean).join(', '),client:isP?(inter.nomLibre||''):(c.nom||''),contact:isP?(inter.telLibre||''):(c.tel||''),date:inter.date||today(),
+        signataire:S.settings.signataire,fonction:S.settings.fonction,cachet:S.settings.cachet!==false,forages:[blankForage()]};}
+  }else{
+    data=S.rapportLibre||(()=>{try{return JSON.parse(localStorage.getItem(RKEY))}catch(e){return null}})()||{date:today(),signataire:S.settings.signataire,fonction:S.settings.fonction,cachet:true,forages:[blankForage()]};
+  }
+  try{localStorage.setItem(RKEY,JSON.stringify(data))}catch(e){}
+  S.rapportCtx=id;save();
+  V.innerHTML='<iframe id="rapFrame" title="Rapport d\'essai de débit" src="../?embed=1" allow="web-share; clipboard-write"></iframe>';
+  rapTimer=setInterval(rapCapture,3000);
+}
+addEventListener('pagehide',rapCapture);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)rapCapture()});
+
 /* ---------- Plus ---------- */
 function plus(){
   tab('plus');setHead('Plus');
@@ -606,7 +650,7 @@ function plus(){
     <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
     <a class="tile" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, avances, net</small></a>
     <a class="tile" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
-    <a class="tile" href="../" target="_blank" rel="noopener"><span>📄</span><b>Rapport d'essai</b><small>Essai de débit</small></a>
+    <a class="tile" href="#/rapport/libre"><span>📄</span><b>Rapport d'essai</b><small>Sans chantier</small></a>
     <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>Société, sauvegarde</small></a>
   </div>`;
 }
