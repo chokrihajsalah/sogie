@@ -133,7 +133,7 @@ const DEF={
 };
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-const needDemo=DEMO&&(!S||typeof S!=='object');
+const needDemo=DEMO&&(!S||typeof S!=='object'||!S.demoLoaded);
 if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
 for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
 S.settings=Object.assign({},DEF.settings,S.settings);
@@ -834,7 +834,7 @@ function params(){
 
 window.__sogeiG={get S(){return S},docPdf,enLettres,docTotals,recapEmp,journal,stockOf,nextNum};
 if(DEMO){document.documentElement.classList.add('demo');$('.mark').insertAdjacentHTML('afterend','<span class="tag" style="background:#f0b44c;color:#3a2600">DÉMO</span>')}
-(needDemo?fetch('demo.json',{cache:'no-store'}).then(r=>r.json()).then(o=>{S=o;for(const k in DEF)if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]));S.settings=Object.assign({},DEF.settings,S.settings);save()}).catch(()=>toast('Données de démo introuvables')):Promise.resolve()).then(route);
+(needDemo?fetch('demo.json',{cache:'no-store'}).then(r=>r.json()).then(o=>{S=o;S.demoLoaded=true;for(const k in DEF)if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]));S.settings=Object.assign({},DEF.settings,S.settings);save()}).catch(()=>{V.innerHTML='<div class="card"><b>Impossible de charger la démo.</b><p class="hint">Vérifiez la connexion internet puis réessayez.</p><button class="primary" onclick="location.reload()">Réessayer</button></div>';throw 0}):Promise.resolve()).then(route,()=>{});
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
