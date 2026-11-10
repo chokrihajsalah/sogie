@@ -3,11 +3,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SOGEI Gestion</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json" id="mf">
+<script>if(/[?&]demo=1/.test(location.search)){document.getElementById("mf").href="manifest-demo.json";document.title="SOGEI Démo";document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Démo">')}</script>
 <meta name="theme-color" content="#2f5496">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="SOGEI Gestion">
+<script>if(!/[?&]demo=1/.test(location.search))document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Gestion">')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
