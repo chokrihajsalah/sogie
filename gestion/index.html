@@ -4,11 +4,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SOGEI Gestion</title>
 <link rel="manifest" href="manifest.json" id="mf">
-<script>if(/[?&]demo=1/.test(location.search)){document.getElementById("mf").href="manifest-demo.json";document.title="SOGEI Démo";document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Démo">')}</script>
+<script>if(/[?&]demo=1/.test(location.search)||localStorage.getItem("sogei-mode")==="demo"){document.getElementById("mf").href="manifest-demo.json";document.title="SOGEI Démo";document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Démo">')}</script>
 <meta name="theme-color" content="#2f5496">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<script>if(!/[?&]demo=1/.test(location.search))document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Gestion">')</script>
+<script>if(!(/[?&]demo=1/.test(location.search)||localStorage.getItem("sogei-mode")==="demo"))document.write('<meta name="apple-mobile-web-app-title" content="SOGEI Gestion">')</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
 <style>
@@ -126,7 +126,9 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 (function(){
 'use strict';
 /* =================== Données =================== */
-const DEMO=/[?&]demo=1/.test(location.search);
+// Mode démo : par le lien ?demo=1 ou par le bouton « Voir la démo » (mémorisé dans ce téléphone)
+if(/[?&]demo=1/.test(location.search))try{localStorage.setItem('sogei-mode','demo')}catch(e){}
+const DEMO=(()=>{try{return localStorage.getItem('sogei-mode')==='demo'}catch(e){return false}})();
 const KEY=DEMO?'sogei-gestion-demo':'sogei-gestion-v1';
 const DEF={
   settings:{societe:"Sté Générale d'Équipement Hydraulique et Électrique",mf:'',rc:'',tel:'74 427 522',gsm:'51 617 617',adresse:"Rue Ibn Badis, Avenue d'Algérie Sfax 3000",rib:'',tva:19,timbre:1,signataire:'KHALED GRAYRI',fonction:'Gérant',cachet:true,lastBackup:null},
@@ -298,7 +300,7 @@ function accueil(){
   const pt=S.pointage[today()]||{},actifs=S.employes.filter(e=>e.actif!==false),nonPointes=actifs.filter(e=>!pt[e.id]).length;
   const days=S.settings.lastBackup?Math.floor((Date.now()-new Date(S.settings.lastBackup))/864e5):null;
   let h='';
-  if(DEMO)h+=`<div class="card" style="border-color:#f0b44c;background:color-mix(in srgb,#f0b44c 12%,var(--card))"><b>Mode démo — un an d’activité fictive</b><p class="hint">Novembre 2025 → novembre 2026. Tout est modifiable ici sans toucher à vos vraies données.</p><div class="row"><a class="btn small primary" href="./">Quitter la démo</a><button class="small" id="demoReset">Remettre la démo à zéro</button></div></div>`;
+  if(DEMO)h+=`<div class="card" style="border-color:#f0b44c;background:color-mix(in srgb,#f0b44c 12%,var(--card))"><b>Mode démo — un an d’activité fictive</b><p class="hint">Novembre 2025 → novembre 2026. Tout est modifiable ici sans toucher à vos vraies données.</p><div class="row"><button class="small primary" id="demoQuit">Quitter la démo</button><button class="small" id="demoReset">Remettre la démo à zéro</button></div></div>`;
   if(!DEMO&&S.clients.length+S.docs.length>0&&(days===null||days>=7))h+=`<div class="card" style="border-color:var(--amber)"><div class="row"><span class="grow">💾 ${days===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+days+' jours.'} Les données sont seulement sur ce téléphone.</span><a class="btn small primary" href="#/params">Sauvegarder</a></div></div>`;
   h+=`<div class="kpis">
     <a class="kpi" href="#/docs"><small>Facturé en ${MOIS[+m.slice(5)-1]}</small><b class="money">${dt(caMois)}</b><small>DT TTC</small></a>
@@ -312,8 +314,11 @@ function accueil(){
   h+=`<div class="card"><h2>Chantiers en cours <a class="tag" href="#/interventions">Tout voir</a></h2><div class="list">${actives.slice(0,6).map(interItem).join('')||'<div class="empty">Aucun chantier en cours.</div>'}</div></div>`;
   if(imp.length)h+=`<div class="card"><h2>Factures impayées</h2><div class="list">${imp.sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(docItem).join('')}</div></div>`;
   if(bas.length)h+=`<div class="card"><h2>Stock bas</h2><div class="list">${bas.map(artItem).join('')}</div></div>`;
+  if(!DEMO&&S.docs.length===0)h+=`<div class="card"><h2>Découvrir l’appli</h2><p class="hint">Voir l’appli remplie avec un an d’activité fictive. Vos vraies données ne sont pas touchées.</p><button class="primary" id="demoOpen">👀 Voir la démo (1 an de données)</button></div>`;
   if(!S.clients.length)h+=`<div class="card"><h2>Bienvenue</h2><p class="hint">Commencez par compléter les informations de la société (matricule fiscal) dans <a href="#/params">Paramètres</a>, puis ajoutez vos salariés, vos articles en stock et vos clients.</p></div>`;
   V.innerHTML=h;
+  if($('#demoQuit'))$('#demoQuit').onclick=()=>{try{localStorage.removeItem('sogei-mode')}catch(e){}(history.replaceState(null,'','./#/'),location.reload())};
+  if($('#demoOpen'))$('#demoOpen').onclick=()=>{try{localStorage.setItem('sogei-mode','demo')}catch(e){}(history.replaceState(null,'','./#/'),location.reload())};
   if($('#demoReset'))confirmBtn($('#demoReset'),()=>{localStorage.removeItem(KEY);location.reload()});
 }
 
@@ -659,6 +664,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)rapCapture(
 /* ---------- Plus ---------- */
 function plus(){
   tab('plus');setHead('Plus');
+  setTimeout(()=>{const t=$('#demoTile');if(t)t.onclick=e=>{e.preventDefault();try{DEMO?localStorage.removeItem('sogei-mode'):localStorage.setItem('sogei-mode','demo')}catch(_){}(history.replaceState(null,'','./#/'),location.reload())}});
   const bas=S.articles.filter(a=>a.seuil!==''&&a.seuil!=null&&stockOf(a)<=num(a.seuil)).length;
   V.innerHTML=`<div class="tiles">
     <a class="tile" href="#/stock"><span>📦</span><b>Stock</b><small>${S.articles.length} articles${bas?' · '+bas+' bas':''}</small></a>
@@ -669,6 +675,7 @@ function plus(){
     <a class="tile" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
     <a class="tile" href="#/rapport/libre"><span>📄</span><b>Rapport d'essai</b><small>Sans chantier</small></a>
     <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>Société, sauvegarde</small></a>
+    <a class="tile" href="#" id="demoTile"><span>👀</span><b>${DEMO?'Quitter la démo':'Voir la démo'}</b><small>${DEMO?'Retour à vos données':'1 an de données fictives'}</small></a>
   </div>`;
 }
 
