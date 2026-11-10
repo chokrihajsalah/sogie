@@ -92,6 +92,14 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 .chips button{min-height:36px;border-radius:20px;font-size:14px;white-space:nowrap}
 .chips button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 #rapFrame{position:fixed;left:0;right:0;top:calc(56px + env(safe-area-inset-top,0px));width:100%;height:calc(100vh - 114px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - 114px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));border:0;background:var(--bg);z-index:4}
+.bars{display:flex;align-items:flex-end;gap:4px;padding-top:8px}
+.bars>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.bars i{display:block;width:100%;background:var(--brand);border-radius:4px 4px 0 0;min-height:2px}
+.bars i.e{background:var(--ok);opacity:.75}
+.bars small{font-size:10px;color:var(--muted)}
+.bar2{display:flex;gap:2px;align-items:flex-end;width:100%;height:130px}
+.bar2 i{flex:1}
+.hbar{height:8px;border-radius:4px;background:var(--brand);margin-top:4px}
 @media (max-width:370px){.grid{grid-template-columns:1fr}.line{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -117,13 +125,15 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 (function(){
 'use strict';
 /* =================== Données =================== */
-const KEY='sogei-gestion-v1';
+const DEMO=/[?&]demo=1/.test(location.search);
+const KEY=DEMO?'sogei-gestion-demo':'sogei-gestion-v1';
 const DEF={
   settings:{societe:"Sté Générale d'Équipement Hydraulique et Électrique",mf:'',rc:'',tel:'74 427 522',gsm:'51 617 617',adresse:"Rue Ibn Badis, Avenue d'Algérie Sfax 3000",rib:'',tva:19,timbre:1,signataire:'KHALED GRAYRI',fonction:'Gérant',cachet:true,lastBackup:null},
   clients:[],interventions:[],docs:[],paiements:[],articles:[],mouvements:[],employes:[],pointage:{},avances:[],caisse:[]
 };
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+const needDemo=DEMO&&(!S||typeof S!=='object');
 if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
 for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
 S.settings=Object.assign({},DEF.settings,S.settings);
@@ -262,7 +272,7 @@ const routes=[
   [/^#\/plus$/,plus],
   [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
   [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],
-  [/^#\/caisse$/,caisse],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
+  [/^#\/caisse$/,caisse],[/^#\/bilan$/,bilan],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
 ];
 function route(){
   const h=(location.hash||'#/').split('?')[0];
@@ -287,13 +297,15 @@ function accueil(){
   const pt=S.pointage[today()]||{},actifs=S.employes.filter(e=>e.actif!==false),nonPointes=actifs.filter(e=>!pt[e.id]).length;
   const days=S.settings.lastBackup?Math.floor((Date.now()-new Date(S.settings.lastBackup))/864e5):null;
   let h='';
-  if(S.clients.length+S.docs.length>0&&(days===null||days>=7))h+=`<div class="card" style="border-color:var(--amber)"><div class="row"><span class="grow">💾 ${days===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+days+' jours.'} Les données sont seulement sur ce téléphone.</span><a class="btn small primary" href="#/params">Sauvegarder</a></div></div>`;
+  if(DEMO)h+=`<div class="card" style="border-color:#f0b44c;background:color-mix(in srgb,#f0b44c 12%,var(--card))"><b>Mode démo — un an d’activité fictive</b><p class="hint">Novembre 2025 → novembre 2026. Tout est modifiable ici sans toucher à vos vraies données.</p><div class="row"><a class="btn small primary" href="./">Quitter la démo</a><button class="small" id="demoReset">Remettre la démo à zéro</button></div></div>`;
+  if(!DEMO&&S.clients.length+S.docs.length>0&&(days===null||days>=7))h+=`<div class="card" style="border-color:var(--amber)"><div class="row"><span class="grow">💾 ${days===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+days+' jours.'} Les données sont seulement sur ce téléphone.</span><a class="btn small primary" href="#/params">Sauvegarder</a></div></div>`;
   h+=`<div class="kpis">
     <a class="kpi" href="#/docs"><small>Facturé en ${MOIS[+m.slice(5)-1]}</small><b class="money">${dt(caMois)}</b><small>DT TTC</small></a>
     <a class="kpi" href="#/caisse"><small>Encaissé en ${MOIS[+m.slice(5)-1]}</small><b class="money">${dt(encMois)}</b><small>DT</small></a>
     <a class="kpi${totImp>0?' warn':''}" href="#/docs?f=impayees"><small>Reste à encaisser</small><b class="money">${dt(totImp)}</b><small>${imp.length} facture${imp.length>1?'s':''}</small></a>
     <a class="kpi" href="#/caisse"><small>Solde caisse</small><b class="money">${dt(solde)}</b><small>DT</small></a>
   </div>`;
+  h+=`<a class="btn" href="#/bilan">📊 Bilan des 12 derniers mois</a>`;
   h+=`<div class="row"><a class="btn primary grow" href="#/inter/new">+ Chantier</a><a class="btn grow" href="#/doc-edit/new?k=devis">+ Devis</a><a class="btn grow" href="#/doc-edit/new?k=facture">+ Facture</a></div>`;
   if(actifs.length)h+=`<a class="card" href="#/pointage" style="text-decoration:none;color:inherit"><div class="row"><span class="grow">🕘 Pointage du jour</span>${nonPointes?`<span class="tag amber">${nonPointes} à pointer</span>`:'<span class="tag ok">Fait</span>'}</div></a>`;
   h+=`<div class="card"><h2>Chantiers en cours <a class="tag" href="#/interventions">Tout voir</a></h2><div class="list">${actives.slice(0,6).map(interItem).join('')||'<div class="empty">Aucun chantier en cours.</div>'}</div></div>`;
@@ -301,6 +313,7 @@ function accueil(){
   if(bas.length)h+=`<div class="card"><h2>Stock bas</h2><div class="list">${bas.map(artItem).join('')}</div></div>`;
   if(!S.clients.length)h+=`<div class="card"><h2>Bienvenue</h2><p class="hint">Commencez par compléter les informations de la société (matricule fiscal) dans <a href="#/params">Paramètres</a>, puis ajoutez vos salariés, vos articles en stock et vos clients.</p></div>`;
   V.innerHTML=h;
+  if($('#demoReset'))confirmBtn($('#demoReset'),()=>{localStorage.removeItem(KEY);location.reload()});
 }
 
 /* ---------- Clients ---------- */
@@ -614,7 +627,8 @@ function rapCapture(){
 // En quittant un rapport : on l'enregistre, puis on remet le rapport libre en place
 function rapLeave(){
   if(!S.rapportCtx)return;rapCapture();
-  if(S.rapportCtx!=='libre'){try{if(S.rapportLibre)localStorage.setItem(RKEY,JSON.stringify(S.rapportLibre));else localStorage.removeItem(RKEY)}catch(e){}}
+  if(DEMO){const r=localStorage.getItem(RKEY+'-real');if(r)localStorage.setItem(RKEY,r);else localStorage.removeItem(RKEY);localStorage.removeItem(RKEY+'-real')}
+  else if(S.rapportCtx!=='libre'){try{if(S.rapportLibre)localStorage.setItem(RKEY,JSON.stringify(S.rapportLibre));else localStorage.removeItem(RKEY)}catch(e){}}
   S.rapportCtx=null;save();
 }
 function rapport(id){
@@ -622,6 +636,7 @@ function rapport(id){
   if(id!=='libre'&&!inter)return go('#/interventions');
   tab(inter?'interventions':'plus');
   setHead(inter?'Rapport — '+cName(inter):"Rapport d'essai",{back:inter?'#/inter/'+id:'#/plus'});
+  if(DEMO&&localStorage.getItem(RKEY+'-real')===null)localStorage.setItem(RKEY+'-real',localStorage.getItem(RKEY)||'');
   rapCapture();
   let data;
   if(inter){
@@ -650,6 +665,7 @@ function plus(){
     <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
     <a class="tile" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, avances, net</small></a>
     <a class="tile" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
+    <a class="tile" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
     <a class="tile" href="#/rapport/libre"><span>📄</span><b>Rapport d'essai</b><small>Sans chantier</small></a>
     <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>Société, sauvegarde</small></a>
   </div>`;
@@ -746,7 +762,7 @@ function paie(){
 
 /* ---------- Caisse ---------- */
 let cMois=null;
-const CAT_OUT=['Carburant','Achat matériel','Pièces / fournitures','Salaire','Loyer','Électricité / eau','Téléphone','Entretien véhicule','Impôts / CNSS','Divers'];
+const CAT_OUT=['Carburant','Dépôt banque','Achat matériel','Pièces / fournitures','Salaire','Loyer','Électricité / eau','Téléphone','Entretien véhicule','Impôts / CNSS','Divers'];
 const CAT_IN=['Vente comptoir','Apport','Divers'];
 function caisse(){
   tab('plus');cMois=cMois||ym(today());setHead('Caisse',{back:'#/plus'});
@@ -764,6 +780,39 @@ function caisse(){
   $('#addC').onclick=()=>{const m=num($('#cm').value);if(m<=0)return toast('Montant ?');S.caisse.push({id:uid(),date:$('#cd').value||today(),sens,montant:m,categorie:$('#cc').value,note:$('#cn').value.trim()});save();toast('Opération enregistrée');caisse()};
   V.querySelectorAll('[data-dc]').forEach(b=>confirmBtn(b,()=>{S.caisse=S.caisse.filter(c=>c.id!==b.dataset.dc);save();caisse()}));
   $('#m').onchange=()=>{cMois=$('#m').value||ym(today());caisse()};
+}
+
+/* ---------- Bilan 12 mois ---------- */
+function bilan(){
+  tab('plus');setHead('Bilan 12 mois',{back:'#/plus'});
+  const now=new Date(today()+'T12:00:00'),M=[];
+  for(let k=11;k>=0;k--){const d=new Date(now.getFullYear(),now.getMonth()-k,1);M.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
+  const fact=S.docs.filter(d=>d.kind==='facture'&&ym(d.date)>=M[0]);
+  const ca=M.map(m=>r3(fact.filter(d=>ym(d.date)===m).reduce((a,d)=>a+docTotals(d).ttc,0)));
+  const enc=M.map(m=>r3(S.paiements.filter(p=>ym(p.date)===m).reduce((a,p)=>a+num(p.montant),0)));
+  const dep=M.map(m=>r3(-journal().filter(j=>ym(j.date)===m&&j.montant<0&&!/^Dépôt banque/.test(j.lib)).reduce((a,j)=>a+j.montant,0)));
+  const max=Math.max(1,...ca,...enc);
+  const T=ca.reduce((a,b)=>a+b,0),E=enc.reduce((a,b)=>a+b,0),Dp=dep.reduce((a,b)=>a+b,0);
+  const byC={};fact.forEach(d=>{const k=d.clientId==='passager'?'passager':d.clientId;byC[k]=(byC[k]||0)+docTotals(d).ttc});
+  const passT=byC.passager||0;delete byC.passager;const top=Object.entries(byC).sort((a,b)=>b[1]-a[1]).slice(0,8),tmax=top.length?top[0][1]:1;
+  const inter=S.interventions.filter(i=>ym(i.date)>=M[0]&&i.statut!=='annule');
+  const byT=TYPES.map(([k,l])=>[l,inter.filter(i=>i.type===k).length]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]);
+  const dv=S.docs.filter(d=>d.kind==='devis'&&ym(d.date)>=M[0]),dvOk=dv.filter(d=>d.factureId||d.statut==='accepte').length;
+  const ML=m=>MOIS[+m.slice(5)-1].slice(0,3);
+  V.innerHTML=`<div class="kpis">
+    <div class="kpi"><small>Facturé (12 mois)</small><b class="money">${dt(T,0)}</b><small>DT TTC</small></div>
+    <div class="kpi"><small>Encaissé (12 mois)</small><b class="money">${dt(E,0)}</b><small>DT</small></div>
+    <div class="kpi"><small>Dépenses de caisse</small><b class="money">${dt(Dp,0)}</b><small>DT (salaires, achats…)</small></div>
+    <div class="kpi"><small>Chantiers réalisés</small><b>${inter.length}</b><small>${fact.length} factures</small></div>
+  </div>
+  <div class="card"><h2>Chiffre d’affaires par mois</h2>
+    <div class="bars">${M.map((m,k)=>`<div title="${moisLabel(m)} : ${dt(ca[k],0)} DT facturé, ${dt(enc[k],0)} DT encaissé"><div class="bar2"><i style="height:${ca[k]/max*100}%"></i><i class="e" style="height:${enc[k]/max*100}%"></i></div><small>${ML(m)}</small></div>`).join('')}</div>
+    <p class="hint"><span style="color:var(--brand)">■</span> facturé · <span style="color:var(--ok)">■</span> encaissé</p>
+    <div class="list">${M.map((m,k)=>`<div class="item" style="min-height:0;padding:7px 2px"><div class="t"><b>${moisLabel(m)}</b></div><div class="r money">${dt(ca[k],0)}<small style="color:var(--ok)">${dt(enc[k],0)} encaissé</small></div></div>`).reverse().join('')}</div>
+  </div>
+  <div class="card"><h2>Meilleurs clients</h2><div class="list">${top.map(([id,v])=>{const c=byId('clients',id);return `<a class="item" href="#/client/${id}" style="display:block"><div class="row"><b class="grow" style="font-weight:600">${esc(c?c.nom:'?')}</b><span class="money">${dt(v,0)} DT</span></div><div class="hbar" style="width:${v/tmax*100}%"></div></a>`}).join('')||'<div class="empty">Aucune facture.</div>'}</div>${passT?`<p class="hint">Clients passagers (total) : ${dt(passT,0)} DT</p>`:''}</div>
+  <div class="card"><h2>Types de travaux</h2><div class="list">${byT.map(([l,n])=>`<div class="item" style="min-height:0;padding:8px 2px"><div class="t"><b>${esc(l)}</b></div><div class="r">${n}</div></div>`).join('')}</div>
+  <p class="hint">Devis : ${dv.length} envoyés, ${dvOk} acceptés (${dv.length?Math.round(dvOk/dv.length*100):0} %).</p></div>`;
 }
 
 /* ---------- Paramètres ---------- */
@@ -784,7 +833,8 @@ function params(){
 }
 
 window.__sogeiG={get S(){return S},docPdf,enLettres,docTotals,recapEmp,journal,stockOf,nextNum};
-route();
+if(DEMO){document.documentElement.classList.add('demo');$('.mark').insertAdjacentHTML('afterend','<span class="tag" style="background:#f0b44c;color:#3a2600">DÉMO</span>')}
+(needDemo?fetch('demo.json',{cache:'no-store'}).then(r=>r.json()).then(o=>{S=o;for(const k in DEF)if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]));S.settings=Object.assign({},DEF.settings,S.settings);save()}).catch(()=>toast('Données de démo introuvables')):Promise.resolve()).then(route);
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
 </script>
