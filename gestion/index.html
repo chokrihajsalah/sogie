@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SOGEI Gestion</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f5496">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="SOGEI Gestion">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#eef2f8;--card:#fff;--fg:#17233a;--muted:#5b6a83;--line:#d5deeb;
+  --brand:#4472c4;--brand-deep:#2f5496;--input:#f7f9fc;--ok:#1f7a4d;--warn:#b3261e;--amber:#9a6400;
+  --display:"Barlow Semi Condensed","Arial Narrow",Arial,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1624;--card:#18223a;--fg:#e6ecf7;--muted:#9aa8c2;--line:#2b3a58;--brand:#5b87d6;--brand-deep:#8fb0ea;--input:#111a2c;--ok:#5cc28f;--warn:#ff8a80;--amber:#f0b44c;color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+.ltot{min-height:44px;display:flex;align-items:center;justify-content:flex-end;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:680px;margin:0 auto;padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px))}
+header{background:linear-gradient(180deg,#2f5496,#4472c4);color:#fff;padding-top:env(safe-area-inset-top,0px);position:sticky;top:0;z-index:6}
+header .wrap{display:flex;align-items:center;gap:10px;min-height:56px}
+header h1{font:600 20px/1.1 var(--display);margin:0;flex:1;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:rgba(255,255,255,.16);border:0;color:#fff;min-height:40px}
+.mark{font:700 22px/1 "Times New Roman",serif;letter-spacing:.04em}
+main.wrap{display:flex;flex-direction:column;gap:12px;padding-block:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card h2{font:600 14px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--brand-deep);margin:0;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);min-width:0}
+input,select,textarea{width:100%;font:500 16px var(--body);color:var(--fg);background:var(--input);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px}
+textarea{min-height:70px;resize:vertical}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+button,.btn{font:600 15px var(--body);border-radius:9px;min-height:44px;padding:0 14px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--fg);display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+button.primary,.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+button.ghost{border-color:transparent;background:transparent;color:var(--brand-deep);padding:0 8px}
+button.danger{color:var(--warn)}
+button.small{min-height:34px;font-size:14px;padding:0 10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>.grow{flex:1}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:10px;padding:11px 2px;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-height:52px}
+.item:first-child{border-top:0}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t small{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .r{text-align:right;font-weight:600;white-space:nowrap}
+.item .r small{display:block;font-weight:500}
+.tag{display:inline-block;font:600 12px/1 var(--body);padding:4px 7px;border-radius:20px;background:color-mix(in srgb,var(--brand) 14%,transparent);color:var(--brand-deep);white-space:nowrap}
+.tag.ok{background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok)}
+.tag.warn{background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn)}
+.tag.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:var(--amber)}
+.tag.grey{background:color-mix(in srgb,var(--muted) 15%,transparent);color:var(--muted)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;text-decoration:none;color:inherit}
+.kpi small{display:block;color:var(--muted);font-size:13px}
+.kpi b{display:block;font:700 22px/1.2 var(--display);font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi.warn b{color:var(--warn)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 12px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:6px;min-height:96px}
+.tile span{font-size:26px}
+.tile b{font:600 16px var(--display)}
+.tile small{color:var(--muted);font-size:13px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr);padding:0}
+nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 7px;color:var(--muted);text-decoration:none;font-size:12px;font-weight:600}
+nav.tabs a span{font-size:20px;line-height:1}
+nav.tabs a.on{color:var(--brand-deep)}
+.search{position:relative}
+.money{font-variant-numeric:tabular-nums}
+table.lines{width:100%;border-collapse:collapse;font-size:14px}
+.line{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;grid-template-columns:.8fr 1fr 1.2fr auto;gap:8px;align-items:end}
+.line .des{grid-column:1/-1}
+.totals{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-variant-numeric:tabular-nums}
+.totals .big{font:700 19px var(--display);color:var(--brand-deep)}
+.empty{color:var(--muted);text-align:center;padding:18px 6px;font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;border-radius:0;min-height:38px;padding:0 12px;min-width:44px}
+.seg button.on{background:var(--brand);color:#fff}
+.seg button.on.A{background:var(--warn)}
+.seg button.on.D{background:var(--amber)}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:#17233a;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:9;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw}
+#toast.on{opacity:1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.chips button{min-height:36px;border-radius:20px;font-size:14px;white-space:nowrap}
+.chips button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+@media (max-width:370px){.grid{grid-template-columns:1fr}.line{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <button id="back" class="small" aria-label="Retour" hidden>‹</button>
+  <span class="mark" aria-hidden="true">SOGEI</span>
+  <h1 id="title">Gestion</h1>
+  <span id="hdrAct"></span>
+</div></header>
+<main class="wrap" id="view"></main>
+<nav class="tabs" aria-label="Navigation"><div class="wrap">
+  <a href="#/" data-tab="accueil"><span>🏠</span>Accueil</a>
+  <a href="#/clients" data-tab="clients"><span>👥</span>Clients</a>
+  <a href="#/interventions" data-tab="interventions"><span>🔧</span>Chantiers</a>
+  <a href="#/docs" data-tab="docs"><span>🧾</span>Factures</a>
+  <a href="#/plus" data-tab="plus"><span>☰</span>Plus</a>
+</div></nav>
+<div id="toast" role="status"></div>
+
+<script src="assets.js"></script>
+<script>
+(function(){
+'use strict';
+/* =================== Données =================== */
+const KEY='sogei-gestion-v1';
+const DEF={
+  settings:{societe:"Sté Générale d'Équipement Hydraulique et Électrique",mf:'',rc:'',tel:'74 427 522',gsm:'51 617 617',adresse:"Rue Ibn Badis, Avenue d'Algérie Sfax 3000",rib:'',tva:19,timbre:1,signataire:'KHALED GRAYRI',fonction:'Gérant',cachet:true,lastBackup:null},
+  clients:[],interventions:[],docs:[],paiements:[],articles:[],mouvements:[],employes:[],pointage:{},avances:[],caisse:[]
+};
+let S;
+try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
+for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
+S.settings=Object.assign({},DEF.settings,S.settings);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Mémoire pleine : faites une sauvegarde')}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const ym=d=>String(d||'').slice(0,7);
+const byId=(arr,id)=>S[arr].find(x=>x.id===id);
+
+/* =================== Outils =================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num=x=>{const n=parseFloat(String(x??'').replace(/\s/g,'').replace(',','.'));return isFinite(n)?n:0};
+const r3=n=>Math.round(n*1000)/1000;
+function dt(n,dec=3){const s=Math.abs(r3(n)).toFixed(dec),[i,d]=s.split('.');return (n<0?'−':'')+i.replace(/\B(?=(\d{3})+(?!\d))/g,' ')+(d?','+d:'')}
+const DT=n=>dt(n)+' DT';
+const frD=iso=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||'');return m?m[3]+'/'+m[2]+'/'+m[1]:''};
+const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const moisLabel=m=>{const [y,mo]=m.split('-');return MOIS[+mo-1]+' '+y};
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+function telLink(t){const d=String(t||'').replace(/\D/g,'');return d?'tel:'+(d.length===8?'+216'+d:d):''}
+function waLink(t,msg){let d=String(t||'').replace(/\D/g,'');if(d.length===8)d='216'+d;if(d.startsWith('00'))d=d.slice(2);return d?'https://wa.me/'+d+(msg?'?text='+encodeURIComponent(msg):''):''}
+function mapLink(c){const g=String(c.gps||'').trim();if(g)return /^https?:/.test(g)?g:'https://maps.google.com/?q='+encodeURIComponent(g);return c.adresse?'https://maps.google.com/?q='+encodeURIComponent(c.adresse):''}
+
+/* Montant en lettres (dinars / millimes) */
+function enLettres(n){
+  const U=['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize'];
+  const D={2:'vingt',3:'trente',4:'quarante',5:'cinquante',6:'soixante'};
+  function lt100(n){
+    if(n<17)return U[n];if(n<20)return 'dix-'+U[n-10];
+    const d=Math.floor(n/10),u=n%10;
+    if(d===7)return 'soixante'+(u===1?'-et-':'-')+lt100(10+u);
+    if(d===9)return 'quatre-vingt-'+lt100(10+u);
+    if(d===8)return 'quatre-vingt'+(u?'-'+U[u]:'s');
+    return D[d]+(u===1?'-et-un':u?'-'+U[u]:'');
+  }
+  function lt1000(n){const c=Math.floor(n/100),r=n%100;let s='';if(c)s=(c>1?U[c]+'-cent':'cent')+(c>1&&!r?'s':'');if(r)s+=(s?'-':'')+lt100(r);return s||'zéro'}
+  function full(n){
+    if(n===0)return 'zéro';const parts=[];
+    const mil=Math.floor(n/1e6),k=Math.floor(n%1e6/1000),r=n%1000;
+    if(mil)parts.push(lt1000(mil)+(mil>1?' millions':' million'));
+    if(k)parts.push(k===1?'mille':lt1000(k).replace(/(cent|vingt)s$/,'$1')+'-mille');
+    if(r)parts.push(lt1000(r));
+    return parts.join(' ');
+  }
+  const t=Math.round(n*1000),di=Math.floor(t/1000),mi=t%1000;
+  let s=full(di)+(di>1?' dinars':' dinar');
+  if(mi)s+=' et '+full(mi)+(mi>1?' millimes':' millime');
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+/* =================== Calculs =================== */
+function docTotals(d){
+  const ht=r3((d.lignes||[]).reduce((a,l)=>a+num(l.qte)*num(l.pu),0));
+  const remise=r3(ht*num(d.remise)/100);
+  const base=r3(ht-remise);
+  const tva=r3(base*num(d.tva)/100);
+  const timbre=d.kind==='facture'?num(d.timbre):0;
+  const ttc=r3(base+tva+timbre);
+  return {ht,remise,base,tva,timbre,ttc};
+}
+const paye=d=>r3(S.paiements.filter(p=>p.docId===d.id).reduce((a,p)=>a+num(p.montant),0));
+function docEtat(d){
+  if(d.kind==='devis'){const m={brouillon:['Brouillon','grey'],envoye:['Envoyé','amber'],accepte:['Accepté','ok'],refuse:['Refusé','warn']};if(d.factureId)return ['Facturé','ok'];return m[d.statut||'brouillon']}
+  const t=docTotals(d).ttc,p=paye(d);
+  if(t>0&&p>=t-0.0005)return ['Payée','ok'];if(p>0)return ['Partielle','amber'];return ['Impayée','warn'];
+}
+const reste=d=>r3(docTotals(d).ttc-paye(d));
+const stockOf=a=>r3(num(a.stock0)+S.mouvements.filter(m=>m.articleId===a.id).reduce((s,m)=>s+num(m.qte),0));
+function nextNum(kind,date){
+  const y=String(date||today()).slice(0,4),p=(kind==='devis'?'D':'F')+'-'+y+'-';
+  const max=S.docs.filter(d=>d.kind===kind&&String(d.num||'').startsWith(p)).reduce((m,d)=>Math.max(m,parseInt(d.num.slice(p.length))||0),0);
+  return p+String(max+1).padStart(3,'0');
+}
+// Sorties de stock d'une facture : recalculées à chaque enregistrement
+function applyStock(d){
+  S.mouvements=S.mouvements.filter(m=>m.docId!==d.id);
+  if(d.kind!=='facture')return;
+  (d.lignes||[]).forEach(l=>{if(l.articleId&&byId('articles',l.articleId)&&num(l.qte))S.mouvements.push({id:uid(),articleId:l.articleId,date:d.date,qte:-num(l.qte),motif:'Facture '+d.num,docId:d.id})});
+}
+// Journal de caisse = opérations saisies + paiements reçus + avances sur salaire
+function journal(){
+  const L=S.caisse.map(c=>({id:c.id,date:c.date,montant:c.sens==='-'?-num(c.montant):num(c.montant),lib:(c.categorie||'')+(c.note?' — '+c.note:''),src:'caisse'}));
+  S.paiements.forEach(p=>{const d=byId('docs',p.docId),c=d&&byId('clients',d.clientId);L.push({id:p.id,date:p.date,montant:num(p.montant),lib:'Paiement '+(d?d.num:'')+(c?' — '+c.nom:'')+(p.mode?' ('+p.mode+')':''),src:'paiement',docId:p.docId})});
+  S.avances.forEach(a=>{const e=byId('employes',a.empId);L.push({id:a.id,date:a.date,montant:-num(a.montant),lib:'Avance salaire — '+(e?e.nom:''),src:'avance'})});
+  return L.sort((a,b)=>b.date.localeCompare(a.date));
+}
+function recapEmp(e,m){
+  let P=0,D=0,A=0;
+  Object.keys(S.pointage).filter(d=>d.startsWith(m)).forEach(d=>{const v=S.pointage[d][e.id];if(v==='P')P++;else if(v==='D')D++;else if(v==='A')A++});
+  const jours=P+D/2;
+  const du=e.type==='mois'?num(e.salaire):r3(jours*num(e.salaire));
+  const av=r3(S.avances.filter(a=>a.empId===e.id&&a.date.startsWith(m)).reduce((s,a)=>s+num(a.montant),0));
+  return {P,D,A,jours,du,av,net:r3(du-av)};
+}
+
+/* =================== Formulaires =================== */
+// champ : {k,l,t:'text|tel|date|number|select|textarea|check',o:[[v,l]],full,ph,step}
+function fields(spec,obj){
+  return '<div class="grid">'+spec.map(f=>{
+    const v=obj[f.k]??'',id='f_'+f.k,cls=f.full?' class="full"':'';
+    if(f.t==='select')return `<label${cls}>${esc(f.l)}<select id="${id}">${f.o.map(([a,b])=>`<option value="${esc(a)}"${String(v)===String(a)?' selected':''}>${esc(b)}</option>`).join('')}</select></label>`;
+    if(f.t==='textarea')return `<label class="full">${esc(f.l)}<textarea id="${id}" placeholder="${esc(f.ph||'')}">${esc(v)}</textarea></label>`;
+    if(f.t==='check')return `<label class="full" style="flex-direction:row;align-items:center;gap:8px;color:var(--fg)"><input type="checkbox" id="${id}" style="width:22px;min-height:22px"${v?' checked':''}> ${esc(f.l)}</label>`;
+    const im=f.t==='number'?' inputmode="decimal"':'';
+    const tp=f.t==='number'?'text':(f.t||'text');
+    return `<label${cls}>${esc(f.l)}<input id="${id}" type="${tp}"${im} value="${esc(v)}" placeholder="${esc(f.ph||'')}"${f.list?` list="${f.list}"`:''} autocomplete="off"></label>`;
+  }).join('')+'</div>';
+}
+function read(spec,obj){spec.forEach(f=>{const el=document.getElementById('f_'+f.k);if(!el)return;obj[f.k]=f.t==='check'?el.checked:el.value.trim()});return obj}
+const clientOpts=()=>[['','— Choisir —'],...S.clients.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).map(c=>[c.id,c.nom])];
+
+/* =================== Rendu / routes =================== */
+const V=$('#view');
+function setHead(title,{back,act}={}){
+  $('#title').textContent=title;document.title=title+' · SOGEI';
+  const b=$('#back');b.hidden=!back;b.onclick=()=>{if(history.length>1)history.back();else location.hash=back};
+  $('#hdrAct').innerHTML=act||'';
+}
+function tab(t){document.querySelectorAll('nav.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===t))}
+function confirmBtn(btn,fn){btn.onclick=()=>{if(btn.dataset.armed){fn();return}btn.dataset.armed=1;const o=btn.textContent;btn.textContent='Confirmer ?';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=o}},3000)}}
+const go=h=>{location.hash=h};
+
+const routes=[
+  [/^#?\/?$/,accueil],
+  [/^#\/clients$/,clients],[/^#\/client\/([\w-]+)$/,clientView],[/^#\/client-edit\/([\w-]+)$/,clientEdit],
+  [/^#\/interventions$/,interventions],[/^#\/inter\/([\w-]+)$/,interEdit],
+  [/^#\/docs$/,docs],[/^#\/doc\/([\w-]+)$/,docView],[/^#\/doc-edit\/([\w-]+)$/,docEdit],
+  [/^#\/plus$/,plus],
+  [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
+  [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],
+  [/^#\/caisse$/,caisse],[/^#\/params$/,params]
+];
+function route(){
+  const h=(location.hash||'#/').split('?')[0];
+  for(const [re,fn] of routes){const m=re.exec(h);if(m){V.innerHTML='';scrollTo(0,0);fn(...m.slice(1));return}}
+  go('#/');
+}
+addEventListener('hashchange',route);
+
+/* ---------- Accueil ---------- */
+function accueil(){
+  tab('accueil');setHead('Tableau de bord');
+  const m=ym(today());
+  const fact=S.docs.filter(d=>d.kind==='facture');
+  const caMois=r3(fact.filter(d=>ym(d.date)===m).reduce((a,d)=>a+docTotals(d).ttc,0));
+  const encMois=r3(S.paiements.filter(p=>ym(p.date)===m).reduce((a,p)=>a+num(p.montant),0));
+  const imp=fact.filter(d=>reste(d)>0.0005);
+  const totImp=r3(imp.reduce((a,d)=>a+reste(d),0));
+  const solde=r3(journal().reduce((a,j)=>a+j.montant,0));
+  const actives=S.interventions.filter(i=>i.statut==='afaire'||i.statut==='encours').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const bas=S.articles.filter(a=>a.seuil!==''&&a.seuil!=null&&stockOf(a)<=num(a.seuil));
+  const pt=S.pointage[today()]||{},actifs=S.employes.filter(e=>e.actif!==false),nonPointes=actifs.filter(e=>!pt[e.id]).length;
+  const days=S.settings.lastBackup?Math.floor((Date.now()-new Date(S.settings.lastBackup))/864e5):null;
+  let h='';
+  if(S.clients.length+S.docs.length>0&&(days===null||days>=7))h+=`<div class="card" style="border-color:var(--amber)"><div class="row"><span class="grow">💾 ${days===null?'Aucune sauvegarde faite.':'Dernière sauvegarde il y a '+days+' jours.'} Les données sont seulement sur ce téléphone.</span><a class="btn small primary" href="#/params">Sauvegarder</a></div></div>`;
+  h+=`<div class="kpis">
+    <a class="kpi" href="#/docs"><small>Facturé en ${MOIS[+m.slice(5)-1]}</small><b class="money">${dt(caMois)}</b><small>DT TTC</small></a>
+    <a class="kpi" href="#/caisse"><small>Encaissé en ${MOIS[+m.slice(5)-1]}</small><b class="money">${dt(encMois)}</b><small>DT</small></a>
+    <a class="kpi${totImp>0?' warn':''}" href="#/docs?f=impayees"><small>Reste à encaisser</small><b class="money">${dt(totImp)}</b><small>${imp.length} facture${imp.length>1?'s':''}</small></a>
+    <a class="kpi" href="#/caisse"><small>Solde caisse</small><b class="money">${dt(solde)}</b><small>DT</small></a>
+  </div>`;
+  h+=`<div class="row"><a class="btn primary grow" href="#/inter/new">+ Chantier</a><a class="btn grow" href="#/doc-edit/new?k=devis">+ Devis</a><a class="btn grow" href="#/doc-edit/new?k=facture">+ Facture</a></div>`;
+  if(actifs.length)h+=`<a class="card" href="#/pointage" style="text-decoration:none;color:inherit"><div class="row"><span class="grow">🕘 Pointage du jour</span>${nonPointes?`<span class="tag amber">${nonPointes} à pointer</span>`:'<span class="tag ok">Fait</span>'}</div></a>`;
+  h+=`<div class="card"><h2>Chantiers en cours <a class="tag" href="#/interventions">Tout voir</a></h2><div class="list">${actives.slice(0,6).map(interItem).join('')||'<div class="empty">Aucun chantier en cours.</div>'}</div></div>`;
+  if(imp.length)h+=`<div class="card"><h2>Factures impayées</h2><div class="list">${imp.sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(docItem).join('')}</div></div>`;
+  if(bas.length)h+=`<div class="card"><h2>Stock bas</h2><div class="list">${bas.map(artItem).join('')}</div></div>`;
+  if(!S.clients.length)h+=`<div class="card"><h2>Bienvenue</h2><p class="hint">Commencez par compléter les informations de la société (matricule fiscal) dans <a href="#/params">Paramètres</a>, puis ajoutez vos salariés, vos articles en stock et vos clients.</p></div>`;
+  V.innerHTML=h;
+}
+
+/* ---------- Clients ---------- */
+function clientItem(c){
+  const ds=S.docs.filter(d=>d.kind==='facture'&&d.clientId===c.id),r=r3(ds.reduce((a,d)=>a+reste(d),0));
+  return `<a class="item" href="#/client/${c.id}"><div class="t"><b>${esc(c.nom)}</b><small>${esc([c.tel,c.adresse].filter(Boolean).join(' · '))||'—'}</small></div>${r>0?`<div class="r" style="color:var(--warn)">${dt(r)}<small>dû</small></div>`:''}</a>`;
+}
+function clients(){
+  tab('clients');setHead('Clients',{act:'<button class="small" onclick="location.hash=\'#/client-edit/new\'">+ Nouveau</button>'});
+  V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un client, un téléphone…"><div class="card"><div class="list" id="L"></div></div>`;
+  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));$('#L').innerHTML=L.map(clientItem).join('')||`<div class="empty">${S.clients.length?'Aucun résultat.':'Aucun client. Touchez « + Nouveau ».'}</div>`};
+  $('#q').oninput=draw;draw();
+}
+const CLIENT_F=[{k:'nom',l:'Nom / raison sociale',full:1},{k:'tel',l:'Téléphone',t:'tel'},{k:'tel2',l:'Autre téléphone',t:'tel'},{k:'adresse',l:'Adresse / localité',full:1},{k:'gps',l:'Position GPS ou lien Maps',full:1,ph:'34.74, 10.76'},{k:'mf',l:'Matricule fiscal (si société)',full:1},{k:'notes',l:'Notes',t:'textarea'}];
+function clientEdit(id){
+  tab('clients');const isNew=id==='new';const c=isNew?{id:uid()}:Object.assign({},byId('clients',id));
+  if(!isNew&&!c.nom)return go('#/clients');
+  setHead(isNew?'Nouveau client':'Modifier client',{back:'#/clients'});
+  V.innerHTML=`<div class="card">${fields(CLIENT_F,c)}<button class="ghost small" id="gpsBtn" style="align-self:flex-start">📍 Position actuelle</button></div>
+  <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  $('#gpsBtn').onclick=()=>{if(!navigator.geolocation)return toast('GPS indisponible');toast('Recherche de la position…');navigator.geolocation.getCurrentPosition(p=>{$('#f_gps').value=p.coords.latitude.toFixed(5)+', '+p.coords.longitude.toFixed(5);toast('Position ajoutée')},()=>toast('Position refusée ou introuvable'),{enableHighAccuracy:true,timeout:15000})};
+  $('#ok').onclick=()=>{read(CLIENT_F,c);if(!c.nom)return toast('Le nom est obligatoire');
+    const i=S.clients.findIndex(x=>x.id===c.id);if(i<0)S.clients.push(c);else S.clients[i]=c;save();toast('Client enregistré');
+    const back=new URLSearchParams(location.hash.split('?')[1]||'').get('back');
+    if(back){sessionStorage.setItem('newClient',c.id);history.back()}else location.replace('#/client/'+c.id)};
+  if(!isNew){const d=$('#del');const used=S.interventions.some(x=>x.clientId===id)||S.docs.some(x=>x.clientId===id);
+    if(used){d.onclick=()=>toast('Client utilisé dans des chantiers ou factures : suppression impossible')}else confirmBtn(d,()=>{S.clients=S.clients.filter(x=>x.id!==id);save();go('#/clients')})}
+}
+function clientView(id){
+  tab('clients');const c=byId('clients',id);if(!c)return go('#/clients');
+  setHead(c.nom,{back:'#/clients',act:`<button class="small" onclick="location.hash='#/client-edit/${id}'">Modifier</button>`});
+  const inter=S.interventions.filter(i=>i.clientId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const ds=S.docs.filter(d=>d.clientId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  const du=r3(ds.filter(d=>d.kind==='facture').reduce((a,d)=>a+reste(d),0));
+  const ml=mapLink(c);
+  V.innerHTML=`<div class="card">
+    ${c.tel?`<div class="row"><a class="btn grow" href="${telLink(c.tel)}">📞 Appeler</a><a class="btn grow" href="${waLink(c.tel)}" target="_blank" rel="noopener">💬 WhatsApp</a>${ml?`<a class="btn grow" href="${esc(ml)}" target="_blank" rel="noopener">📍 Carte</a>`:''}</div>`:''}
+    <p class="hint">${esc([c.tel,c.tel2].filter(Boolean).join(' / '))}${c.adresse?'<br>'+esc(c.adresse):''}${c.mf?'<br>MF : '+esc(c.mf):''}</p>
+    ${c.notes?`<p style="margin:0;white-space:pre-wrap">${esc(c.notes)}</p>`:''}
+    ${du>0?`<p style="margin:0;color:var(--warn);font-weight:600">Reste dû : ${DT(du)}</p>`:''}
+  </div>
+  <div class="row"><a class="btn primary grow" href="#/inter/new?c=${id}">+ Chantier</a><a class="btn grow" href="#/doc-edit/new?k=devis&c=${id}">+ Devis</a><a class="btn grow" href="#/doc-edit/new?k=facture&c=${id}">+ Facture</a></div>
+  <div class="card"><h2>Interventions</h2><div class="list">${inter.map(interItem).join('')||'<div class="empty">Aucune.</div>'}</div></div>
+  <div class="card"><h2>Devis et factures</h2><div class="list">${ds.map(docItem).join('')||'<div class="empty">Aucun.</div>'}</div></div>`;
+}
+
+/* ---------- Interventions ---------- */
+const TYPES=[['essai','Essai de débit'],['installation','Installation pompe'],['reparation','Réparation / dépannage'],['rebobinage','Rebobinage moteur'],['entretien','Entretien'],['traitement','Traitement des eaux'],['autre','Autre']];
+const STATUTS=[['afaire','À faire','amber'],['encours','En cours','tag'],['termine','Terminé','ok'],['annule','Annulé','grey']];
+const typeL=k=>(TYPES.find(t=>t[0]===k)||[,k||''])[1];
+const statT=k=>{const s=STATUTS.find(t=>t[0]===k)||STATUTS[0];return `<span class="tag ${s[2]==='tag'?'':s[2]}">${s[1]}</span>`};
+function interItem(i){const c=byId('clients',i.clientId);const f=i.factureId&&byId('docs',i.factureId);
+  return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(c?c.nom:'?')}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}</div></a>`}
+let interFilter='actives';
+function interventions(){
+  tab('interventions');setHead('Chantiers',{act:'<button class="small" onclick="location.hash=\'#/inter/new\'">+ Nouveau</button>'});
+  const F=[['actives','En cours / à faire'],['afacturer','À facturer'],['tout','Tout']];
+  V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${interFilter===k?'on':''}">${l}</button>`).join('')}</div><input id="q" type="search" placeholder="Rechercher…"><div class="card"><div class="list" id="L"></div></div>`;
+  const draw=()=>{const q=$('#q').value.toLowerCase();
+    let L=S.interventions.filter(i=>{if(interFilter==='actives')return i.statut==='afaire'||i.statut==='encours';if(interFilter==='afacturer')return i.statut==='termine'&&!i.factureId;return true});
+    L=L.filter(i=>{const c=byId('clients',i.clientId);return ((c?c.nom:'')+' '+typeL(i.type)+' '+(i.lieu||'')+' '+(i.description||'')).toLowerCase().includes(q)});
+    L.sort((a,b)=>interFilter==='actives'?(a.date||'').localeCompare(b.date||''):(b.date||'').localeCompare(a.date||''));
+    $('#L').innerHTML=L.map(interItem).join('')||'<div class="empty">Aucune intervention.</div>'};
+  V.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>{interFilter=b.dataset.f;interventions()});
+  $('#q').oninput=draw;draw();
+}
+function interEdit(id){
+  tab('interventions');
+  const qs=new URLSearchParams(location.hash.split('?')[1]||'');
+  const isNew=id.startsWith('new');
+  const i=isNew?{id:uid(),date:today(),type:'essai',statut:'afaire',clientId:qs.get('c')||'',employes:[]}:JSON.parse(JSON.stringify(byId('interventions',id)||{}));
+  if(!i.id)return go('#/interventions');
+  const nc=sessionStorage.getItem('newClient');if(nc){i.clientId=nc;sessionStorage.removeItem('newClient')}
+  const draft=sessionStorage.getItem('interDraft');if(draft&&isNew){Object.assign(i,JSON.parse(draft),{clientId:i.clientId||JSON.parse(draft).clientId});sessionStorage.removeItem('interDraft')}
+  setHead(isNew?'Nouvelle intervention':'Intervention',{back:'#/interventions'});
+  const SPEC=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'type',l:'Type',t:'select',o:TYPES},{k:'statut',l:'Statut',t:'select',o:STATUTS.map(s=>[s[0],s[1]])},{k:'date',l:'Date prévue',t:'date'},{k:'lieu',l:'Lieu / forage'},{k:'description',l:'Travaux / remarques',t:'textarea'}];
+  const emps=S.employes.filter(e=>e.actif!==false||(i.employes||[]).includes(e.id));
+  const f=i.factureId&&byId('docs',i.factureId);
+  V.innerHTML=`<div class="card">${fields(SPEC,i)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
+  <div class="card"><h2>Équipe sur place</h2>${emps.length?`<div class="chips" id="E" style="flex-wrap:wrap">${emps.map(e=>`<button data-e="${e.id}" class="${(i.employes||[]).includes(e.id)?'on':''}">${esc(e.nom)}</button>`).join('')}</div>`:'<p class="hint">Ajoutez vos salariés dans Plus → Équipe.</p>'}</div>
+  ${isNew?'':`<div class="card"><h2>Suite</h2>
+    ${i.type==='essai'?'<a class="btn" href="../" target="_blank" rel="noopener">📄 Ouvrir le rapport d\'essai de débit</a>':''}
+    ${f?`<a class="btn" href="#/doc/${f.id}">🧾 Voir la facture ${esc(f.num)}</a>`:`<div class="row"><button class="grow" id="mkDevis">Faire un devis</button><button class="grow primary" id="mkFact">Facturer</button></div>`}
+  </div>`}
+  <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  V.querySelectorAll('#E button').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
+  const collect=()=>{read(SPEC,i);i.employes=[...V.querySelectorAll('#E button.on')].map(b=>b.dataset.e);return i};
+  $('#newC').onclick=()=>{collect();sessionStorage.setItem('interDraft',JSON.stringify(Object.assign({},i,{id:undefined})));go('#/client-edit/new?back=1')};
+  const store=()=>{collect();if(!i.clientId){toast('Choisissez un client');return false}const k=S.interventions.findIndex(x=>x.id===i.id);if(k<0)S.interventions.push(i);else S.interventions[k]=i;save();return true};
+  $('#ok').onclick=()=>{if(store()){toast('Intervention enregistrée');location.replace('#/interventions')}};
+  if(!isNew){
+    confirmBtn($('#del'),()=>{S.interventions=S.interventions.filter(x=>x.id!==i.id);save();go('#/interventions')});
+    const mk=k=>()=>{if(store())go('#/doc-edit/new?k='+k+'&c='+i.clientId+'&i='+i.id)};
+    if($('#mkDevis'))$('#mkDevis').onclick=mk('devis');if($('#mkFact'))$('#mkFact').onclick=mk('facture');
+  }
+}
+
+/* ---------- Devis / factures ---------- */
+function docItem(d){const c=byId('clients',d.clientId),[l,cl]=docEtat(d),t=docTotals(d).ttc,r=d.kind==='facture'?reste(d):0;
+  return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(c?c.nom:'?')}</b><small>${d.kind==='devis'?'Devis':'Facture'} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
+let docFilter='factures';
+function docs(){
+  tab('docs');
+  const qs=new URLSearchParams(location.hash.split('?')[1]||'');if(qs.get('f'))docFilter=qs.get('f');
+  setHead('Devis & factures',{act:'<button class="small" onclick="location.hash=\'#/doc-edit/new?k=facture\'">+ Facture</button>'});
+  const F=[['factures','Factures'],['impayees','Impayées'],['devis','Devis']];
+  V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${docFilter===k?'on':''}">${l}</button>`).join('')}<button onclick="location.hash='#/doc-edit/new?k=devis'">+ Devis</button></div><input id="q" type="search" placeholder="Numéro, client…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>`;
+  const draw=()=>{const q=$('#q').value.toLowerCase();
+    let L=S.docs.filter(d=>docFilter==='devis'?d.kind==='devis':d.kind==='facture'&&(docFilter!=='impayees'||reste(d)>0.0005));
+    L=L.filter(d=>{const c=byId('clients',d.clientId);return (d.num+' '+(c?c.nom:'')).toLowerCase().includes(q)}).sort((a,b)=>b.date.localeCompare(a.date)||b.num.localeCompare(a.num));
+    $('#L').innerHTML=L.map(docItem).join('')||'<div class="empty">Aucun document.</div>';
+    $('#T').textContent=L.length?L.length+' document(s) · total '+DT(L.reduce((a,d)=>a+(docFilter==='impayees'?reste(d):docTotals(d).ttc),0)):''};
+  V.querySelectorAll('.chips button[data-f]').forEach(b=>b.onclick=()=>{docFilter=b.dataset.f;history.replaceState(null,'','#/docs');docs()});
+  $('#q').oninput=draw;draw();
+}
+function docEdit(id){
+  tab('docs');
+  const qs=new URLSearchParams(location.hash.split('?')[1]||'');
+  const isNew=id==='new';
+  let d;
+  if(isNew){const k=qs.get('k')==='devis'?'devis':'facture';
+    d={id:uid(),kind:k,date:today(),clientId:qs.get('c')||'',interventionId:qs.get('i')||'',lignes:[{des:'',qte:'1',pu:''}],tva:S.settings.tva,timbre:k==='facture'?S.settings.timbre:0,remise:'',statut:'brouillon',notes:'',validite:'30'};
+    const inter=d.interventionId&&byId('interventions',d.interventionId);
+    if(inter)d.lignes=[{des:typeL(inter.type)+(inter.lieu?' — '+inter.lieu:''),qte:'1',pu:''}];
+  }else{d=JSON.parse(JSON.stringify(byId('docs',id)||{}));if(!d.id)return go('#/docs')}
+  const nc=sessionStorage.getItem('newClient');if(nc){d.clientId=nc;sessionStorage.removeItem('newClient')}
+  const dr=sessionStorage.getItem('docDraft');if(dr&&isNew){const o=JSON.parse(dr);Object.assign(d,o,{id:d.id,clientId:d.clientId||o.clientId});sessionStorage.removeItem('docDraft')}
+  const isF=d.kind==='facture';
+  setHead((isNew?'Nouvelle ':'')+(isF?'facture':'devis')+(d.num?' '+d.num:''),{back:'#/docs'});
+  const HEAD=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'date',l:'Date',t:'date'},isF?{k:'echeance',l:'Échéance (facultatif)',t:'date'}:{k:'validite',l:'Validité (jours)',t:'number'}];
+  V.innerHTML=`<datalist id="arts">${S.articles.map(a=>`<option value="${esc(a.des)}">`).join('')}</datalist>
+  <div class="card">${fields(HEAD,d)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
+  <div class="card"><h2>Lignes <span class="hint" style="text-transform:none;letter-spacing:0">prix HT en DT</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
+  <div class="card"><div class="grid"><label>Remise (%)<input id="remise" inputmode="decimal" value="${esc(d.remise)}"></label><label>TVA (%)<input id="tva" inputmode="decimal" value="${esc(d.tva)}"></label>${isF?`<label>Timbre fiscal (DT)<input id="timbre" inputmode="decimal" value="${esc(d.timbre)}"></label>`:''}</div>
+  <div class="totals" id="TOT"></div></div>
+  <div class="card"><label>Notes (apparaissent sur le PDF)<textarea id="notes" placeholder="Conditions, garantie, délai…">${esc(d.notes||'')}</textarea></label></div>
+  <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  const LN=$('#LN');
+  function drawLines(){
+    LN.innerHTML=d.lignes.map((l,k)=>`<div class="line" data-k="${k}">
+      <label class="des">Désignation<input data-f="des" list="arts" value="${esc(l.des)}" autocomplete="off"></label>
+      <label>Qté<input data-f="qte" inputmode="decimal" value="${esc(l.qte)}"></label>
+      <label>P.U. HT<input data-f="pu" inputmode="decimal" value="${esc(l.pu)}"></label>
+      <label>Total HT<span class="ltot" data-tot>${dt(num(l.qte)*num(l.pu))}</span></label>
+      <button class="ghost danger small" data-del aria-label="Supprimer la ligne">✕</button>
+      ${l.articleId?`<p class="hint full" style="grid-column:1/-1">📦 Article du stock${isF?' — sortie de stock à l’enregistrement':''}</p>`:''}</div>`).join('');
+    LN.querySelectorAll('.line').forEach(row=>{const k=+row.dataset.k;
+      row.querySelectorAll('input[data-f]').forEach(inp=>inp.oninput=()=>{const l=d.lignes[k];l[inp.dataset.f]=inp.value;
+        if(inp.dataset.f==='des'){const a=S.articles.find(a=>a.des===inp.value);if(a){l.articleId=a.id;if(!l.pu){l.pu=String(a.pv||'');row.querySelector('[data-f=pu]').value=l.pu}}else delete l.articleId}
+        row.querySelector('[data-tot]').textContent=dt(num(l.qte)*num(l.pu));tot()});
+      row.querySelector('input[data-f=des]').onchange=()=>drawLines();
+      row.querySelector('[data-del]').onclick=()=>{d.lignes.splice(k,1);if(!d.lignes.length)d.lignes.push({des:'',qte:'1',pu:''});drawLines();tot()};
+    });
+  }
+  function readTop(){read(HEAD,d);d.remise=$('#remise').value;d.tva=$('#tva').value;if(isF)d.timbre=$('#timbre').value;d.notes=$('#notes').value}
+  function tot(){readTop();const t=docTotals(d);$('#TOT').innerHTML=`<span>Total HT</span><b>${DT(t.ht)}</b>${t.remise?`<span>Remise ${esc(d.remise)} %</span><b>−${DT(t.remise)}</b><span>Net HT</span><b>${DT(t.base)}</b>`:''}<span>TVA ${esc(d.tva)} %</span><b>${DT(t.tva)}</b>${isF?`<span>Timbre fiscal</span><b>${DT(t.timbre)}</b>`:''}<span class="big">Total TTC</span><span class="big">${DT(t.ttc)}</span>`}
+  ['remise','tva','timbre','notes'].forEach(k=>{const e=$('#'+k);if(e)e.oninput=tot});
+  $('#addL').onclick=()=>{d.lignes.push({des:'',qte:'1',pu:''});drawLines();LN.lastElementChild.querySelector('input').focus()};
+  $('#newC').onclick=()=>{readTop();sessionStorage.setItem('docDraft',JSON.stringify(d));go('#/client-edit/new?back=1')};
+  drawLines();tot();
+  $('#ok').onclick=()=>{readTop();if(!d.clientId)return toast('Choisissez un client');
+    d.lignes=d.lignes.filter(l=>String(l.des).trim()||num(l.pu));if(!d.lignes.length)return toast('Ajoutez au moins une ligne');
+    if(!d.num)d.num=nextNum(d.kind,d.date);
+    const k=S.docs.findIndex(x=>x.id===d.id);if(k<0)S.docs.push(d);else S.docs[k]=d;
+    if(isF&&d.interventionId){const it=byId('interventions',d.interventionId);if(it){it.factureId=d.id;if(it.statut!=='annule')it.statut='termine'}}
+    if(isF&&d.fromDevis){const dv=byId('docs',d.fromDevis);if(dv){dv.factureId=d.id;dv.statut='accepte'}}
+    applyStock(d);save();toast((isF?'Facture ':'Devis ')+d.num+' enregistré'+(isF?'e':''));location.replace('#/doc/'+d.id)};
+  if(!isNew)confirmBtn($('#del'),()=>{
+    if(isF&&S.paiements.some(p=>p.docId===d.id))return toast('Supprimez d’abord les paiements de cette facture');
+    S.docs=S.docs.filter(x=>x.id!==d.id);S.mouvements=S.mouvements.filter(m=>m.docId!==d.id);
+    S.interventions.forEach(i=>{if(i.factureId===d.id)delete i.factureId});S.docs.forEach(x=>{if(x.factureId===d.id)delete x.factureId});
+    save();go('#/docs')});
+}
+function docView(id){
+  tab('docs');const d=byId('docs',id);if(!d)return go('#/docs');
+  const c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture',[el,ec]=docEtat(d);
+  setHead((isF?'Facture ':'Devis ')+d.num,{back:'#/docs',act:`<button class="small" onclick="location.hash='#/doc-edit/${id}'">Modifier</button>`});
+  const pays=S.paiements.filter(p=>p.docId===id).sort((a,b)=>a.date.localeCompare(b.date));
+  const dv=d.fromDevis&&byId('docs',d.fromDevis),fa=d.factureId&&byId('docs',d.factureId);
+  V.innerHTML=`<div class="card">
+    <div class="row"><b class="grow">${esc(c.nom||'?')}</b><span class="tag ${ec}">${el}</span></div>
+    <p class="hint">${frD(d.date)}${c.tel?' · '+esc(c.tel):''}${dv?` · issue du devis <a href="#/doc/${dv.id}">${esc(dv.num)}</a>`:''}${fa?` · facturé : <a href="#/doc/${fa.id}">${esc(fa.num)}</a>`:''}</p>
+    <div class="list">${d.lignes.map(l=>`<div class="item" style="min-height:0"><div class="t"><b style="white-space:normal">${esc(l.des)}</b><small>${esc(l.qte)} × ${dt(num(l.pu))}</small></div><div class="r money">${dt(num(l.qte)*num(l.pu))}</div></div>`).join('')}</div>
+    <div class="totals"><span>Total HT</span><b>${DT(t.ht)}</b>${t.remise?`<span>Remise</span><b>−${DT(t.remise)}</b>`:''}<span>TVA ${esc(d.tva)} %</span><b>${DT(t.tva)}</b>${isF?`<span>Timbre</span><b>${DT(t.timbre)}</b>`:''}<span class="big">Total TTC</span><span class="big">${DT(t.ttc)}</span>
+    ${isF?`<span>Payé</span><b style="color:var(--ok)">${DT(paye(d))}</b><span>Reste dû</span><b style="color:${reste(d)>0.0005?'var(--warn)':'var(--ok)'}">${DT(reste(d))}</b>`:''}</div>
+  </div>
+  <div class="row"><button class="primary grow" id="pdf">📤 Envoyer le PDF</button><button class="grow" id="see">👁 Aperçu</button></div>
+  ${isF?`<div class="card"><h2>Paiements</h2><div class="list">${pays.map(p=>`<div class="item"><div class="t"><b>${DT(num(p.montant))}</b><small>${frD(p.date)} · ${esc(p.mode||'')}${p.note?' · '+esc(p.note):''}</small></div><button class="ghost danger small" data-dp="${p.id}">Supprimer</button></div>`).join('')||'<div class="empty">Aucun paiement.</div>'}</div>
+    ${reste(d)>0.0005?`<div class="grid"><label>Montant<input id="pm" inputmode="decimal" value="${dt(reste(d)).replace(/\s/g,'')}"></label><label>Date<input id="pd" type="date" value="${today()}"></label><label>Mode<select id="pmode"><option>Espèces</option><option>Chèque</option><option>Virement</option><option>Traite</option></select></label><label>Note<input id="pn" placeholder="N° chèque…"></label></div><button id="addP">+ Enregistrer le paiement</button>`:''}</div>`
+  :`<div class="card"><h2>Suivi du devis</h2><div class="row">${[['brouillon','Brouillon'],['envoye','Envoyé'],['accepte','Accepté'],['refuse','Refusé']].map(([k,l])=>`<button class="small${(d.statut||'brouillon')===k?' primary':''}" data-st="${k}">${l}</button>`).join('')}</div>
+    ${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button>'}<button id="dup">Dupliquer ce devis</button></div>`}
+  <div id="prev" style="display:flex;flex-direction:column;gap:10px"></div>`;
+  $('#pdf').onclick=()=>sharePdf(d);
+  $('#see').onclick=async()=>{const b=await docPdf(d);const u=URL.createObjectURL(new Blob([b],{type:'application/pdf'}));window.open(u,'_blank')||(location.href=u)};
+  if(isF){
+    V.querySelectorAll('[data-dp]').forEach(b=>confirmBtn(b,()=>{S.paiements=S.paiements.filter(p=>p.id!==b.dataset.dp);save();docView(id)}));
+    if($('#addP'))$('#addP').onclick=()=>{const m=num($('#pm').value);if(m<=0)return toast('Montant invalide');S.paiements.push({id:uid(),docId:id,date:$('#pd').value||today(),montant:m,mode:$('#pmode').value,note:$('#pn').value.trim()});save();toast('Paiement enregistré');docView(id)};
+  }else{
+    V.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{d.statut=b.dataset.st;save();docView(id)});
+    if($('#toF'))$('#toF').onclick=()=>{const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:S.settings.timbre,remise:d.remise,notes:d.notes,fromDevis:d.id};
+      f.num=nextNum('facture',f.date);S.docs.push(f);d.factureId=f.id;d.statut='accepte';
+      if(f.interventionId){const it=byId('interventions',f.interventionId);if(it){it.factureId=f.id;it.statut='termine'}}
+      applyStock(f);save();toast('Facture '+f.num+' créée');go('#/doc/'+f.id)};
+    $('#dup').onclick=()=>{const n=JSON.parse(JSON.stringify(d));n.id=uid();n.date=today();n.num=nextNum('devis',n.date);n.statut='brouillon';delete n.factureId;S.docs.push(n);save();toast('Devis '+n.num+' créé');go('#/doc-edit/'+n.id)};
+  }
+}
+
+/* ---------- PDF (modèle SOGEI) ---------- */
+let ASSETS=null;
+function b64(s){const b=atob(s),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+const safe=s=>String(s??'').replace(/[‘’]/g,"’").replace(/[−–—]/g,'-').replace(/[^\x20-\x7e\xa0-ÿ’€]/g,'');
+async function docPdf(d){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  if(!ASSETS)ASSETS={tpl:b64(SOGEI_ASSETS.MODELE_B64),cachet:b64(SOGEI_ASSETS.CACHET_B64)};
+  const st=S.settings,c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture';
+  const doc=await PDFDocument.create();
+  doc.setTitle((isF?'Facture ':'Devis ')+d.num);doc.setAuthor('SOGEI');
+  const [bg]=await doc.embedPdf(ASSETS.tpl.slice(0),[0]);const H=bg.height,W=bg.width;
+  const reg=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+  const ink=rgb(.133,.133,.133),black=rgb(0,0,0),blue=rgb(0x2f/255,0x54/255,0x96/255),white=rgb(1,1,1),grey=rgb(.955,.96,.97),rule=rgb(.82,.84,.88),light=rgb(.92,.945,.985);
+  const XL=99,XR=548,TOP=140,BOTTOM=740;
+  let page,y;
+  const newPage=()=>{page=doc.addPage([W,H]);page.drawPage(bg,{x:0,y:0,width:W,height:H});y=TOP};
+  const text=(s,x,yy,f,sz,col)=>page.drawText(safe(s),{x,y:H-yy,size:sz,font:f,color:col||ink});
+  const rtext=(s,x,yy,f,sz,col)=>text(s,x-f.widthOfTextAtSize(safe(s),sz),yy,f,sz,col);
+  const rect=(x,yt,w,h,o)=>page.drawRectangle(Object.assign({x,y:H-(yt+h),width:w,height:h},o));
+  const wrap=(s,f,sz,max)=>{const out=[];String(s||'').split(/\n/).forEach(par=>{let line='';safe(par).split(/\s+/).filter(Boolean).forEach(w=>{const tt=line?line+' '+w:w;if(f.widthOfTextAtSize(tt,sz)>max&&line){out.push(line);line=w}else line=tt});out.push(line)});return out};
+  newPage();
+  // Titre
+  const title=(isF?'FACTURE':'DEVIS')+' N° '+d.num;
+  const tw=bold.widthOfTextAtSize(safe(title),20);text(title,(XL+XR)/2-tw/2,150,bold,20,black);
+  y=172;
+  // Bloc société (gauche) / client (droite)
+  const leftL=[st.mf?'MF : '+st.mf:'',st.rc?'RC : '+st.rc:'','Date : '+frD(d.date),isF&&d.echeance?'Échéance : '+frD(d.echeance):'',!isF&&d.validite?'Validité : '+d.validite+' jours':''].filter(Boolean);
+  const cl=[c.nom||'',c.adresse||'',c.tel?'Tél : '+c.tel:'',c.mf?'MF : '+c.mf:''].filter(Boolean);
+  const bx=330,bw=XR-bx,bh=18+cl.length*14;
+  rect(bx,y,bw,bh,{borderColor:blue,borderWidth:.9});
+  text('CLIENT',bx+8,y+12,bold,9,blue);
+  cl.forEach((s,k)=>text(s,bx+8,y+26+k*14,k===0?bold:reg,k===0?11:10,black));
+  leftL.forEach((s,k)=>text(s,XL,y+12+k*15,reg,10.5,blue));
+  y+=Math.max(bh,leftL.length*15)+18;
+  // Tableau des lignes
+  const cQ=380,cPU=460,cT=XR-6,RH=20;
+  const headRow=()=>{rect(XL,y,XR-XL,20,{color:blue});text('Désignation',XL+6,y+14,bold,10,white);rtext('Qté',cQ+18,y+14,bold,10,white);rtext('P.U. HT',cPU+20,y+14,bold,10,white);rtext('Total HT',cT,y+14,bold,10,white);y+=20};
+  headRow();
+  d.lignes.forEach((l,k)=>{
+    const ls=wrap(l.des,reg,10,cQ-XL-30),h=Math.max(RH,8+ls.length*12);
+    if(y+h>BOTTOM){newPage();headRow()}
+    if(k%2===1)rect(XL,y,XR-XL,h,{color:grey});
+    ls.forEach((s,j)=>text(s,XL+6,y+14+j*12,reg,10,ink));
+    rtext(String(l.qte).replace('.',','),cQ+18,y+14,reg,10,ink);
+    rtext(dt(num(l.pu)),cPU+20,y+14,reg,10,ink);
+    rtext(dt(num(l.qte)*num(l.pu)),cT,y+14,bold,10,black);
+    y+=h;page.drawLine({start:{x:XL,y:H-y},end:{x:XR,y:H-y},thickness:.6,color:rule});
+  });
+  y+=10;
+  // Totaux
+  const TL=[['Total HT',t.ht]];
+  if(t.remise)TL.push(['Remise '+String(d.remise).replace('.',',')+' %',-t.remise],['Net HT',t.base]);
+  TL.push(['TVA '+String(d.tva).replace('.',',')+' %',t.tva]);if(isF)TL.push(['Timbre fiscal',t.timbre]);
+  const totH=TL.length*17+26;
+  if(y+totH+50>BOTTOM)newPage();
+  const tx=330;
+  TL.forEach(([l,v])=>{text(l,tx+8,y+12,reg,10.5,ink);rtext(DT(v),cT,y+12,reg,10.5,black);y+=17});
+  rect(tx,y,XR-tx,24,{color:light,borderColor:blue,borderWidth:1});
+  text('Total TTC',tx+8,y+16,bold,12,blue);rtext(DT(t.ttc),cT,y+16,bold,12,blue);
+  y+=36;
+  // Montant en lettres
+  const words=wrap((isF?'Arrêtée la présente facture à la somme de : ':'Arrêté le présent devis à la somme de : ')+enLettres(t.ttc)+'.',reg,10,XR-XL);
+  words.forEach((s,k)=>{if(y>BOTTOM)newPage();text(s,XL,y+k*13,k===0?reg:reg,10,ink)});y+=words.length*13+6;
+  if(d.notes){wrap(d.notes,reg,10,XR-XL).forEach(s=>{if(y>BOTTOM)newPage();text(s,XL,y,reg,10,ink);y+=13})}
+  if(st.rib){if(y>BOTTOM)newPage();text('RIB : '+st.rib,XL,y,reg,10,ink);y+=13}
+  // Signature
+  const sigH=st.cachet!==false?120:45;
+  if(y+20+sigH>760)newPage();
+  let sy=y+22;const SX=448;
+  ["Sté Générale d'Équipement","Hydraulique et Électrique",st.signataire,st.fonction].forEach(s=>{if(!s)return;const w=bold.widthOfTextAtSize(safe(s),11);text(s,SX-w/2,sy,bold,11,black);sy+=14});
+  if(st.cachet!==false){const img=await doc.embedJpg(ASSETS.cachet.slice(0));const w=80,h=w*img.height/img.width;page.drawImage(img,{x:SX+5-w/2,y:H-(sy-4+h),width:w,height:h})}
+  // Numéro de page
+  const pages=doc.getPages();if(pages.length>1)pages.forEach((p,k)=>p.drawText((k+1)+' / '+pages.length,{x:XR-20,y:H-775,size:8,font:reg,color:ink}));
+  return doc.save();
+}
+function pdfName(d){const c=byId('clients',d.clientId)||{};const n=String(c.nom||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');return (d.kind==='facture'?'Facture_':'Devis_')+d.num+(n?'_'+n:'')+'.pdf'}
+async function shareBlob(blob,name,title){
+  let file=null;try{file=new File([blob],name,{type:blob.type})}catch(e){}
+  if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title});return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
+  const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),30000);return 'download';
+}
+async function sharePdf(d){
+  try{toast('Création du PDF…');const b=await docPdf(d);const r=await shareBlob(new Blob([b],{type:'application/pdf'}),pdfName(d),pdfName(d));
+    if(r!=='abort'){if(d.kind==='devis'&&(d.statut||'brouillon')==='brouillon'){d.statut='envoye';save()}toast(r==='shared'?'PDF partagé':'PDF téléchargé')}}
+  catch(e){console.error(e);toast('Erreur PDF : '+e.message)}
+}
+
+/* ---------- Plus ---------- */
+function plus(){
+  tab('plus');setHead('Plus');
+  const bas=S.articles.filter(a=>a.seuil!==''&&a.seuil!=null&&stockOf(a)<=num(a.seuil)).length;
+  V.innerHTML=`<div class="tiles">
+    <a class="tile" href="#/stock"><span>📦</span><b>Stock</b><small>${S.articles.length} articles${bas?' · '+bas+' bas':''}</small></a>
+    <a class="tile" href="#/equipe"><span>👷</span><b>Équipe</b><small>${S.employes.filter(e=>e.actif!==false).length} salariés</small></a>
+    <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
+    <a class="tile" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, avances, net</small></a>
+    <a class="tile" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
+    <a class="tile" href="../" target="_blank" rel="noopener"><span>📄</span><b>Rapport d'essai</b><small>Essai de débit</small></a>
+    <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>Société, sauvegarde</small></a>
+  </div>`;
+}
+
+/* ---------- Stock ---------- */
+function artItem(a){const s=stockOf(a),low=a.seuil!==''&&a.seuil!=null&&s<=num(a.seuil);
+  return `<a class="item" href="#/article/${a.id}"><div class="t"><b>${esc(a.des)}</b><small>${esc(a.ref||'')}${a.pv?' · vente '+dt(num(a.pv))+' DT':''}</small></div><div class="r" style="color:${low?'var(--warn)':'inherit'}">${dt(s,s%1?2:0)}<small>${esc(a.unite||'u')}${low?' · bas':''}</small></div></a>`}
+function stock(){
+  tab('plus');setHead('Stock',{back:'#/plus',act:'<button class="small" onclick="location.hash=\'#/article/new\'">+ Article</button>'});
+  V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un article…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div><p class="hint">Les articles vendus sur une facture sortent automatiquement du stock.</p>`;
+  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.articles.filter(a=>(a.des+' '+(a.ref||'')).toLowerCase().includes(q)).sort((a,b)=>a.des.localeCompare(b.des));
+    $('#L').innerHTML=L.map(artItem).join('')||`<div class="empty">${S.articles.length?'Aucun résultat.':'Aucun article. Ajoutez vos pompes, moteurs, câbles…'}</div>`;
+    const val=S.articles.reduce((s,a)=>s+Math.max(0,stockOf(a))*num(a.pa),0);$('#T').textContent=val?'Valeur du stock (prix d’achat) : '+DT(val):''};
+  $('#q').oninput=draw;draw();
+}
+const ART_F=[{k:'des',l:'Désignation',full:1,ph:'Pompe immergée 4" 1,5 HP'},{k:'ref',l:'Référence / marque'},{k:'unite',l:'Unité',t:'select',o:[['u','pièce'],['m','mètre'],['kg','kg'],['l','litre'],['lot','lot']]},{k:'pa',l:'Prix d’achat HT',t:'number'},{k:'pv',l:'Prix de vente HT',t:'number'},{k:'seuil',l:'Alerte si stock ≤',t:'number'}];
+function articleEdit(id){
+  tab('plus');const isNew=id==='new';const a=isNew?{id:uid(),unite:'u',stock0:'0'}:Object.assign({},byId('articles',id));if(!a.des&&!isNew)return go('#/stock');
+  setHead(isNew?'Nouvel article':a.des,{back:'#/stock'});
+  const mv=S.mouvements.filter(m=>m.articleId===id).sort((x,y)=>y.date.localeCompare(x.date));
+  V.innerHTML=`<div class="card">${fields(isNew?[...ART_F,{k:'stock0',l:'Quantité en stock aujourd’hui',t:'number'}]:ART_F,a)}</div>
+  ${isNew?'':`<div class="card"><h2>Stock : ${dt(stockOf(a),stockOf(a)%1?2:0)} ${esc(a.unite||'')}</h2>
+    <div class="grid"><label>Quantité<input id="mq" inputmode="decimal"></label><label>Motif<select id="mm"><option value="+">Entrée (achat)</option><option value="-">Sortie (chantier, perte)</option><option value="=">Inventaire (nouveau total)</option></select></label><label class="full">Note<input id="mn" placeholder="Fournisseur, chantier…"></label></div>
+    <button id="addM">Enregistrer le mouvement</button>
+    <div class="list">${mv.slice(0,30).map(m=>`<div class="item"><div class="t"><b>${m.qte>0?'+':''}${dt(m.qte,m.qte%1?2:0)}</b><small>${frD(m.date)} · ${esc(m.motif||'')}</small></div>${m.docId?'':`<button class="ghost danger small" data-dm="${m.id}">✕</button>`}</div>`).join('')}</div></div>`}
+  <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  const spec=isNew?[...ART_F,{k:'stock0',t:'number'}]:ART_F;
+  $('#ok').onclick=()=>{read(spec,a);if(!a.des)return toast('Désignation obligatoire');const k=S.articles.findIndex(x=>x.id===a.id);if(k<0)S.articles.push(a);else S.articles[k]=a;save();toast('Article enregistré');location.replace('#/stock')};
+  if(!isNew){
+    $('#addM').onclick=()=>{const q=num($('#mq').value),m=$('#mm').value;if(!$('#mq').value.trim())return toast('Quantité ?');
+      const cur=stockOf(byId('articles',id)),delta=m==='='?q-cur:m==='-'?-Math.abs(q):Math.abs(q);
+      S.mouvements.push({id:uid(),articleId:id,date:today(),qte:r3(delta),motif:(m==='+'?'Entrée':m==='-'?'Sortie':'Inventaire')+($('#mn').value.trim()?' — '+$('#mn').value.trim():'')});save();toast('Stock mis à jour');articleEdit(id)};
+    V.querySelectorAll('[data-dm]').forEach(b=>confirmBtn(b,()=>{S.mouvements=S.mouvements.filter(m=>m.id!==b.dataset.dm);save();articleEdit(id)}));
+    confirmBtn($('#del'),()=>{if(S.docs.some(d=>d.lignes.some(l=>l.articleId===id)))return toast('Article utilisé dans des factures : suppression impossible');S.articles=S.articles.filter(x=>x.id!==id);S.mouvements=S.mouvements.filter(m=>m.articleId!==id);save();go('#/stock')});
+  }
+}
+
+/* ---------- Équipe ---------- */
+function equipe(){
+  tab('plus');setHead('Équipe',{back:'#/plus',act:'<button class="small" onclick="location.hash=\'#/employe/new\'">+ Salarié</button>'});
+  const L=S.employes.slice().sort((a,b)=>(b.actif!==false)-(a.actif!==false)||a.nom.localeCompare(b.nom));
+  V.innerHTML=`<div class="row"><a class="btn grow primary" href="#/pointage">🕘 Pointage</a><a class="btn grow" href="#/paie">💰 Salaires du mois</a></div>
+  <div class="card"><div class="list">${L.map(e=>`<a class="item" href="#/employe/${e.id}"><div class="t"><b>${esc(e.nom)}${e.actif===false?' <span class="tag grey">Parti</span>':''}</b><small>${esc([e.poste,e.tel].filter(Boolean).join(' · '))}</small></div><div class="r">${e.salaire?dt(num(e.salaire))+'<small>DT / '+(e.type==='mois'?'mois':'jour')+'</small>':''}</div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div></div>`;
+}
+const EMP_F=[{k:'nom',l:'Nom et prénom',full:1},{k:'poste',l:'Poste',ph:'Technicien, chauffeur…'},{k:'tel',l:'Téléphone',t:'tel'},{k:'type',l:'Payé',t:'select',o:[['jour','à la journée'],['mois','au mois']]},{k:'salaire',l:'Salaire (DT)',t:'number'},{k:'embauche',l:'Date d’embauche',t:'date'},{k:'actif',l:'Toujours dans l’entreprise',t:'check'}];
+function employeEdit(id){
+  tab('plus');const isNew=id==='new';const e=isNew?{id:uid(),type:'jour',actif:true}:Object.assign({},byId('employes',id));if(!e.nom&&!isNew)return go('#/equipe');
+  setHead(isNew?'Nouveau salarié':e.nom,{back:'#/equipe'});
+  const av=S.avances.filter(a=>a.empId===id).sort((a,b)=>b.date.localeCompare(a.date));
+  V.innerHTML=`<div class="card">${fields(EMP_F,e)}</div>
+  ${isNew?'':`<div class="card"><h2>Avances sur salaire</h2><div class="grid"><label>Montant (DT)<input id="am" inputmode="decimal"></label><label>Date<input id="ad" type="date" value="${today()}"></label><label class="full">Note<input id="an"></label></div><button id="addA">+ Donner une avance</button>
+    <div class="list">${av.slice(0,20).map(a=>`<div class="item"><div class="t"><b>${DT(num(a.montant))}</b><small>${frD(a.date)}${a.note?' · '+esc(a.note):''}</small></div><button class="ghost danger small" data-da="${a.id}">✕</button></div>`).join('')}</div></div>`}
+  <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  $('#ok').onclick=()=>{read(EMP_F,e);if(!e.nom)return toast('Nom obligatoire');const k=S.employes.findIndex(x=>x.id===e.id);if(k<0)S.employes.push(e);else S.employes[k]=e;save();toast('Salarié enregistré');location.replace('#/equipe')};
+  if(!isNew){
+    $('#addA').onclick=()=>{const m=num($('#am').value);if(m<=0)return toast('Montant ?');S.avances.push({id:uid(),empId:id,date:$('#ad').value||today(),montant:m,note:$('#an').value.trim()});save();toast('Avance enregistrée (sortie de caisse)');employeEdit(id)};
+    V.querySelectorAll('[data-da]').forEach(b=>confirmBtn(b,()=>{S.avances=S.avances.filter(a=>a.id!==b.dataset.da);save();employeEdit(id)}));
+    confirmBtn($('#del'),()=>{const used=Object.values(S.pointage).some(p=>p[id])||S.avances.some(a=>a.empId===id);if(used)return toast('Historique existant : décochez plutôt « Toujours dans l’entreprise »');S.employes=S.employes.filter(x=>x.id!==id);save();go('#/equipe')});
+  }
+}
+let pDate=null;
+function pointage(){
+  tab('plus');pDate=pDate||today();
+  setHead('Pointage',{back:'#/plus'});
+  const emps=S.employes.filter(e=>e.actif!==false).sort((a,b)=>a.nom.localeCompare(b.nom));
+  const p=S.pointage[pDate]||{};
+  const d=new Date(pDate+'T12:00:00'),jour=(s=>s.charAt(0).toUpperCase()+s.slice(1))(d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
+  V.innerHTML=`<div class="card"><div class="row"><button class="small" id="prv">‹</button><input type="date" id="pd" value="${pDate}" class="grow" style="flex:1"><button class="small" id="nxt">›</button></div><p class="hint">${jour}</p>
+  ${emps.length?`<div class="row"><button class="small" id="allP">Tous présents</button></div>`:''}</div>
+  <div class="card"><div class="list">${emps.map(e=>`<div class="item"><div class="t"><b>${esc(e.nom)}</b><small>${esc(e.poste||'')}</small></div><div class="seg" data-e="${e.id}">${[['P','Présent'],['D','½'],['A','Absent']].map(([k,l])=>`<button class="${k}${p[e.id]===k?' on':''}" data-v="${k}" aria-label="${l}">${k==='D'?'½':k}</button>`).join('')}</div></div>`).join('')||'<div class="empty">Ajoutez d’abord vos salariés (Plus → Équipe).</div>'}</div>
+  <p class="hint">P = présent · ½ = demi-journée · A = absent. Enregistré automatiquement.</p></div>`;
+  const set=(eid,v)=>{S.pointage[pDate]=S.pointage[pDate]||{};if(S.pointage[pDate][eid]===v)delete S.pointage[pDate][eid];else S.pointage[pDate][eid]=v;if(!Object.keys(S.pointage[pDate]).length)delete S.pointage[pDate];save()};
+  V.querySelectorAll('.seg').forEach(sg=>sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{set(sg.dataset.e,b.dataset.v);pointage()}));
+  if($('#allP'))$('#allP').onclick=()=>{S.pointage[pDate]=S.pointage[pDate]||{};emps.forEach(e=>{if(!S.pointage[pDate][e.id])S.pointage[pDate][e.id]='P'});save();pointage()};
+  const shift=n=>{const x=new Date(pDate+'T12:00:00');x.setDate(x.getDate()+n);pDate=x.toISOString().slice(0,10);pointage()};
+  $('#prv').onclick=()=>shift(-1);$('#nxt').onclick=()=>shift(1);$('#pd').onchange=()=>{pDate=$('#pd').value||today();pointage()};
+}
+let pMois=null;
+function paie(){
+  tab('plus');pMois=pMois||ym(today());setHead('Salaires du mois',{back:'#/plus'});
+  const emps=S.employes.filter(e=>e.actif!==false||recapEmp(e,pMois).jours||recapEmp(e,pMois).av);
+  const R=emps.map(e=>[e,recapEmp(e,pMois)]);
+  const tot=R.reduce((a,[,r])=>({du:a.du+r.du,av:a.av+r.av,net:a.net+r.net}),{du:0,av:0,net:0});
+  V.innerHTML=`<div class="card"><label>Mois<input type="month" id="m" value="${pMois}"></label></div>
+  <div class="card"><div class="list">${R.map(([e,r])=>`<div class="item"><div class="t"><b>${esc(e.nom)}</b><small>${String(r.jours).replace('.',',')} j${r.A?' · '+r.A+' abs.':''} · dû ${dt(r.du)}${r.av?' · avances '+dt(r.av):''}</small></div><div class="r money">${dt(r.net)}<small>net DT</small></div></div>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div>
+  <div class="totals"><span>Total dû</span><b>${DT(tot.du)}</b><span>Avances</span><b>−${DT(tot.av)}</b><span class="big">Reste à payer</span><span class="big">${DT(tot.net)}</span></div></div>
+  <button id="sh">💬 Envoyer le récapitulatif (WhatsApp)</button>
+  <p class="hint">Payé à la journée : jours × salaire. Payé au mois : salaire fixe (absences affichées pour information).</p>`;
+  $('#m').onchange=()=>{pMois=$('#m').value||ym(today());paie()};
+  $('#sh').onclick=()=>{const t='SOGEI — Salaires '+moisLabel(pMois)+'\n'+R.map(([e,r])=>`• ${e.nom} : ${String(r.jours).replace('.',',')} j, dû ${dt(r.du)}, avances ${dt(r.av)}, net ${dt(r.net)} DT`).join('\n')+'\nTotal net : '+DT(tot.net);
+    if(navigator.share)navigator.share({text:t}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')};
+}
+
+/* ---------- Caisse ---------- */
+let cMois=null;
+const CAT_OUT=['Carburant','Achat matériel','Pièces / fournitures','Salaire','Loyer','Électricité / eau','Téléphone','Entretien véhicule','Impôts / CNSS','Divers'];
+const CAT_IN=['Vente comptoir','Apport','Divers'];
+function caisse(){
+  tab('plus');cMois=cMois||ym(today());setHead('Caisse',{back:'#/plus'});
+  const J=journal(),solde=r3(J.reduce((a,j)=>a+j.montant,0)),M=J.filter(j=>ym(j.date)===cMois);
+  const inM=r3(M.filter(j=>j.montant>0).reduce((a,j)=>a+j.montant,0)),outM=r3(-M.filter(j=>j.montant<0).reduce((a,j)=>a+j.montant,0));
+  V.innerHTML=`<div class="kpis"><div class="kpi"><small>Solde total</small><b class="money">${dt(solde)}</b><small>DT</small></div><div class="kpi"><small>${moisLabel(cMois)}</small><b class="money" style="font-size:17px;color:var(--ok)">+${dt(inM)}</b><b class="money" style="font-size:17px;color:var(--warn)">−${dt(outM)}</b></div></div>
+  <div class="card"><h2>Nouvelle opération</h2><div class="seg" id="sens"><button data-s="-" class="on A">Dépense</button><button data-s="+">Entrée</button></div>
+  <div class="grid"><label>Montant (DT)<input id="cm" inputmode="decimal"></label><label>Date<input id="cd" type="date" value="${today()}"></label><label>Catégorie<select id="cc"></select></label><label>Note<input id="cn" placeholder="Détail"></label></div><button class="primary" id="addC">Enregistrer</button></div>
+  <div class="card"><div class="row"><h2 class="grow">Opérations</h2><input type="month" id="m" value="${cMois}" style="width:auto"></div>
+  <div class="list">${M.map(j=>`<div class="item"><div class="t"><b style="white-space:normal">${esc(j.lib||'—')}</b><small>${frD(j.date)}${j.src==='paiement'?' · auto':j.src==='avance'?' · auto':''}</small></div><div class="r money" style="color:${j.montant<0?'var(--warn)':'var(--ok)'}">${j.montant>0?'+':''}${dt(j.montant)}</div>${j.src==='caisse'?`<button class="ghost danger small" data-dc="${j.id}">✕</button>`:''}</div>`).join('')||'<div class="empty">Aucune opération ce mois.</div>'}</div>
+  <p class="hint">Les paiements clients et les avances sur salaire sont ajoutés automatiquement.</p></div>`;
+  let sens='-';
+  const cats=()=>{$('#cc').innerHTML=(sens==='-'?CAT_OUT:CAT_IN).map(c=>`<option>${c}</option>`).join('')};cats();
+  V.querySelectorAll('#sens button').forEach(b=>b.onclick=()=>{sens=b.dataset.s;V.querySelectorAll('#sens button').forEach(x=>{x.classList.toggle('on',x===b);x.classList.toggle('A',x===b&&sens==='-')});cats()});
+  $('#addC').onclick=()=>{const m=num($('#cm').value);if(m<=0)return toast('Montant ?');S.caisse.push({id:uid(),date:$('#cd').value||today(),sens,montant:m,categorie:$('#cc').value,note:$('#cn').value.trim()});save();toast('Opération enregistrée');caisse()};
+  V.querySelectorAll('[data-dc]').forEach(b=>confirmBtn(b,()=>{S.caisse=S.caisse.filter(c=>c.id!==b.dataset.dc);save();caisse()}));
+  $('#m').onchange=()=>{cMois=$('#m').value||ym(today());caisse()};
+}
+
+/* ---------- Paramètres ---------- */
+const PAR_F=[{k:'societe',l:'Raison sociale',full:1},{k:'mf',l:'Matricule fiscal',full:1,ph:'0000000/X/A/M/000'},{k:'rc',l:'Registre de commerce'},{k:'rib',l:'RIB (sur les factures)'},{k:'tva',l:'TVA par défaut (%)',t:'number'},{k:'timbre',l:'Timbre fiscal (DT)',t:'number'},{k:'signataire',l:'Signataire'},{k:'fonction',l:'Fonction'},{k:'cachet',l:'Mettre le cachet et la signature sur les PDF',t:'check'}];
+function params(){
+  tab('plus');setHead('Paramètres',{back:'#/plus'});
+  const st=S.settings;
+  V.innerHTML=`<div class="card"><h2>Société</h2>${fields(PAR_F,st)}<button class="primary" id="ok">Enregistrer</button></div>
+  <div class="card"><h2>Sauvegarde</h2><p class="hint">Les données sont enregistrées uniquement sur ce téléphone. Faites une sauvegarde chaque semaine (envoyez-la-vous sur WhatsApp ou Gmail). ${st.lastBackup?'Dernière : '+frD(st.lastBackup.slice(0,10))+'.':'Aucune sauvegarde pour l’instant.'}</p>
+  <button class="primary" id="bk">💾 Sauvegarder maintenant</button>
+  <label>Restaurer une sauvegarde<input type="file" id="rs" accept=".json,application/json"></label></div>
+  <div class="card"><h2>Données</h2><p class="hint">${S.clients.length} clients · ${S.interventions.length} interventions · ${S.docs.length} devis/factures · ${S.articles.length} articles · ${S.employes.length} salariés</p><button class="danger" id="wipe">Tout effacer</button></div>`;
+  $('#ok').onclick=()=>{read(PAR_F,st);save();toast('Paramètres enregistrés')};
+  $('#bk').onclick=async()=>{const name='SOGEI_sauvegarde_'+today()+'.json';const r=await shareBlob(new Blob([JSON.stringify(S)],{type:'application/json'}),name,name);if(r!=='abort'){S.settings.lastBackup=new Date().toISOString();save();toast('Sauvegarde faite');params()}};
+  $('#rs').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(!o||!Array.isArray(o.clients)||!o.settings)throw new Error('format');
+      if(!confirm('Remplacer toutes les données de ce téléphone par cette sauvegarde ?'))return;S=o;for(const k in DEF)if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]));save();toast('Sauvegarde restaurée');go('#/')}catch(err){toast('Fichier de sauvegarde invalide')}};
+  confirmBtn($('#wipe'),()=>{S=JSON.parse(JSON.stringify(DEF));save();toast('Données effacées');go('#/')});
+}
+
+window.__sogeiG={get S(){return S},docPdf,enLettres,docTotals,recapEmp,journal,stockOf,nextNum};
+route();
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+</body></html>
