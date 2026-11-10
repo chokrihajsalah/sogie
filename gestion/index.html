@@ -101,6 +101,14 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 .bar2{display:flex;gap:2px;align-items:flex-end;width:100%;height:130px}
 .bar2 i{flex:1}
 .hbar{height:8px;border-radius:4px;background:var(--brand);margin-top:4px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:13px}
+.cal b{font-size:11px;color:var(--muted);font-weight:600}
+.cal span{border-radius:7px;padding:5px 0;background:var(--input);border:1px solid var(--line);line-height:1.15}
+.cal span small{display:block;font-weight:700;font-size:11px}
+.cal span.P{background:color-mix(in srgb,var(--ok) 16%,var(--card));border-color:transparent}
+.cal span.D{background:color-mix(in srgb,var(--amber) 20%,var(--card));border-color:transparent}
+.cal span.A{background:color-mix(in srgb,var(--warn) 16%,var(--card));border-color:transparent}
+.cal span.x{visibility:hidden}
 @media (max-width:370px){.grid{grid-template-columns:1fr}.line{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -227,7 +235,7 @@ function applyStock(d){
 function journal(){
   const L=S.caisse.map(c=>({id:c.id,date:c.date,montant:c.sens==='-'?-num(c.montant):num(c.montant),lib:(c.categorie||'')+(c.note?' — '+c.note:''),src:'caisse'}));
   S.paiements.forEach(p=>{const d=byId('docs',p.docId),c=d&&byId('clients',d.clientId);L.push({id:p.id,date:p.date,montant:num(p.montant),lib:'Paiement '+(d?d.num:'')+(c?' — '+c.nom:'')+(p.mode?' ('+p.mode+')':''),src:'paiement',docId:p.docId})});
-  S.avances.forEach(a=>{const e=byId('employes',a.empId);L.push({id:a.id,date:a.date,montant:-num(a.montant),lib:'Avance salaire — '+(e?e.nom:''),src:'avance'})});
+  S.avances.forEach(a=>{const e=byId('employes',a.empId);L.push({id:a.id,date:a.date,montant:-num(a.montant),lib:'Acompte salaire — '+(e?e.nom:''),src:'avance'})});
   return L.sort((a,b)=>b.date.localeCompare(a.date));
 }
 function recapEmp(e,m){
@@ -274,7 +282,7 @@ const routes=[
   [/^#\/docs$/,docs],[/^#\/doc\/([\w-]+)$/,docView],[/^#\/doc-edit\/([\w-]+)$/,docEdit],
   [/^#\/plus$/,plus],
   [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
-  [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],
+  [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],[/^#\/paie\/([\w-]+)$/,paieEmp],
   [/^#\/caisse$/,caisse],[/^#\/bilan$/,bilan],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
 ];
 function route(){
@@ -670,7 +678,7 @@ function plus(){
     <a class="tile" href="#/stock"><span>📦</span><b>Stock</b><small>${S.articles.length} articles${bas?' · '+bas+' bas':''}</small></a>
     <a class="tile" href="#/equipe"><span>👷</span><b>Équipe</b><small>${S.employes.filter(e=>e.actif!==false).length} salariés</small></a>
     <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
-    <a class="tile" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, avances, net</small></a>
+    <a class="tile" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, acomptes, fiche PDF</small></a>
     <a class="tile" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
     <a class="tile" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
     <a class="tile" href="#/rapport/libre"><span>📄</span><b>Rapport d'essai</b><small>Sans chantier</small></a>
@@ -725,12 +733,12 @@ function employeEdit(id){
   setHead(isNew?'Nouveau salarié':e.nom,{back:'#/equipe'});
   const av=S.avances.filter(a=>a.empId===id).sort((a,b)=>b.date.localeCompare(a.date));
   V.innerHTML=`<div class="card">${fields(EMP_F,e)}</div>
-  ${isNew?'':`<div class="card"><h2>Avances sur salaire</h2><div class="grid"><label>Montant (DT)<input id="am" inputmode="decimal"></label><label>Date<input id="ad" type="date" value="${today()}"></label><label class="full">Note<input id="an"></label></div><button id="addA">+ Donner une avance</button>
+  ${isNew?'':`<div class="card"><h2>Acomptes sur salaire</h2><div class="grid"><label>Montant (DT)<input id="am" inputmode="decimal"></label><label>Date<input id="ad" type="date" value="${today()}"></label><label class="full">Note<input id="an"></label></div><button id="addA">+ Donner un acompte</button>
     <div class="list">${av.slice(0,20).map(a=>`<div class="item"><div class="t"><b>${DT(num(a.montant))}</b><small>${frD(a.date)}${a.note?' · '+esc(a.note):''}</small></div><button class="ghost danger small" data-da="${a.id}">✕</button></div>`).join('')}</div></div>`}
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
   $('#ok').onclick=()=>{read(EMP_F,e);if(!e.nom)return toast('Nom obligatoire');const k=S.employes.findIndex(x=>x.id===e.id);if(k<0)S.employes.push(e);else S.employes[k]=e;save();toast('Salarié enregistré');location.replace('#/equipe')};
   if(!isNew){
-    $('#addA').onclick=()=>{const m=num($('#am').value);if(m<=0)return toast('Montant ?');S.avances.push({id:uid(),empId:id,date:$('#ad').value||today(),montant:m,note:$('#an').value.trim()});save();toast('Avance enregistrée (sortie de caisse)');employeEdit(id)};
+    $('#addA').onclick=()=>{const m=num($('#am').value);if(m<=0)return toast('Montant ?');S.avances.push({id:uid(),empId:id,date:$('#ad').value||today(),montant:m,note:$('#an').value.trim()});save();toast('Acompte enregistré (sortie de caisse)');employeEdit(id)};
     V.querySelectorAll('[data-da]').forEach(b=>confirmBtn(b,()=>{S.avances=S.avances.filter(a=>a.id!==b.dataset.da);save();employeEdit(id)}));
     confirmBtn($('#del'),()=>{const used=Object.values(S.pointage).some(p=>p[id])||S.avances.some(a=>a.empId===id);if(used)return toast('Historique existant : décochez plutôt « Toujours dans l’entreprise »');S.employes=S.employes.filter(x=>x.id!==id);save();go('#/equipe')});
   }
@@ -759,13 +767,101 @@ function paie(){
   const R=emps.map(e=>[e,recapEmp(e,pMois)]);
   const tot=R.reduce((a,[,r])=>({du:a.du+r.du,av:a.av+r.av,net:a.net+r.net}),{du:0,av:0,net:0});
   V.innerHTML=`<div class="card"><label>Mois<input type="month" id="m" value="${pMois}"></label></div>
-  <div class="card"><div class="list">${R.map(([e,r])=>`<div class="item"><div class="t"><b>${esc(e.nom)}</b><small>${String(r.jours).replace('.',',')} j${r.A?' · '+r.A+' abs.':''} · dû ${dt(r.du)}${r.av?' · avances '+dt(r.av):''}</small></div><div class="r money">${dt(r.net)}<small>net DT</small></div></div>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div>
-  <div class="totals"><span>Total dû</span><b>${DT(tot.du)}</b><span>Avances</span><b>−${DT(tot.av)}</b><span class="big">Reste à payer</span><span class="big">${DT(tot.net)}</span></div></div>
+  <div class="card"><div class="list">${R.map(([e,r])=>`<a class="item" href="#/paie/${e.id}"><div class="t"><b>${esc(e.nom)}</b><small>${String(r.jours).replace('.',',')} j${r.A?' · '+r.A+' abs.':''} · dû ${dt(r.du)}${r.av?' · acomptes '+dt(r.av):''}</small></div><div class="r money">${dt(r.net)}<small>net DT ›</small></div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div>
+  <div class="totals"><span>Total dû</span><b>${DT(tot.du)}</b><span>Acomptes</span><b>${tot.av?'−':''}${DT(tot.av)}</b><span class="big">Reste à payer</span><span class="big">${DT(tot.net)}</span></div></div>
+  <button class="primary" id="pdfAll">📤 Fiches de tous les salariés (PDF)</button>
   <button id="sh">💬 Envoyer le récapitulatif (WhatsApp)</button>
+  <p class="hint">Touchez un salarié pour voir sa fiche du mois (jours, salaire, acomptes).</p>
   <p class="hint">Payé à la journée : jours × salaire. Payé au mois : salaire fixe (absences affichées pour information).</p>`;
   $('#m').onchange=()=>{pMois=$('#m').value||ym(today());paie()};
-  $('#sh').onclick=()=>{const t='SOGEI — Salaires '+moisLabel(pMois)+'\n'+R.map(([e,r])=>`• ${e.nom} : ${String(r.jours).replace('.',',')} j, dû ${dt(r.du)}, avances ${dt(r.av)}, net ${dt(r.net)} DT`).join('\n')+'\nTotal net : '+DT(tot.net);
+  $('#pdfAll').onclick=()=>sharePaie(emps,pMois);
+  $('#sh').onclick=()=>{const t='SOGEI — Salaires '+moisLabel(pMois)+'\n'+R.map(([e,r])=>`• ${e.nom} : ${String(r.jours).replace('.',',')} j, dû ${dt(r.du)}, acomptes ${dt(r.av)}, net ${dt(r.net)} DT`).join('\n')+'\nTotal net : '+DT(tot.net);
     if(navigator.share)navigator.share({text:t}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')};
+}
+
+// Fiche mensuelle d'un salarié
+function joursMois(m){const [y,mo]=m.split('-').map(Number),n=new Date(y,mo,0).getDate();return Array.from({length:n},(_,k)=>m+'-'+String(k+1).padStart(2,'0'))}
+function paieEmp(id){
+  tab('plus');pMois=pMois||ym(today());const e=byId('employes',id);if(!e)return go('#/paie');
+  setHead(e.nom,{back:'#/paie'});
+  const r=recapEmp(e,pMois),J=joursMois(pMois),first=(new Date(J[0]+'T12:00:00').getDay()+6)%7;
+  const av=S.avances.filter(a=>a.empId===id&&a.date.startsWith(pMois)).sort((a,b)=>a.date.localeCompare(b.date));
+  const L={P:'P',D:'½',A:'A'};
+  V.innerHTML=`<div class="card"><label>Mois<input type="month" id="m" value="${pMois}"></label></div>
+  <div class="card"><h2>${esc(moisLabel(pMois))}</h2><p class="hint">${esc(e.poste||'')} · payé ${e.type==='mois'?'au mois : '+DT(num(e.salaire)):'à la journée : '+DT(num(e.salaire))+' / jour'}</p>
+    <div class="cal">${['L','M','M','J','V','S','D'].map(d=>`<b>${d}</b>`).join('')}${'<span class="x"></span>'.repeat(first)}${J.map(d=>{const v=(S.pointage[d]||{})[id];return `<span class="${v||''}">${+d.slice(8)}<small>${v?L[v]:'·'}</small></span>`}).join('')}</div>
+    <p class="hint">P présent · ½ demi-journée · A absent · « · » non pointé</p></div>
+  <div class="card"><h2>Salaire</h2><div class="totals">
+    <span>Jours présents</span><b>${r.P}</b><span>Demi-journées</span><b>${r.D}</b><span>Absences</span><b>${r.A}</b>
+    <span>Jours travaillés</span><b>${String(r.jours).replace('.',',')}</b>
+    <span>Salaire dû</span><b>${DT(r.du)}</b><span>Acomptes (${av.length})</span><b style="color:var(--warn)">${r.av?'−':''}${DT(r.av)}</b>
+    <span class="big">Net à payer</span><span class="big">${DT(r.net)}</span></div></div>
+  <div class="card"><h2>Acomptes du mois</h2><div class="list">${av.map(a=>`<div class="item" style="min-height:0"><div class="t"><b>${DT(num(a.montant))}</b><small>${frD(a.date)}${a.note?' · '+esc(a.note):''}</small></div></div>`).join('')||'<div class="empty">Aucun acompte ce mois.</div>'}</div>
+    <a class="btn" href="#/employe/${id}">+ Donner un acompte</a></div>
+  <button class="primary" id="pdf">📤 Envoyer la fiche (PDF)</button>`;
+  $('#m').onchange=()=>{pMois=$('#m').value||ym(today());paieEmp(id)};
+  $('#pdf').onclick=()=>sharePaie([e],pMois);
+}
+async function paiePdf(list,m){
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  if(!ASSETS)ASSETS={tpl:b64(SOGEI_ASSETS.MODELE_B64),cachet:b64(SOGEI_ASSETS.CACHET_B64)};
+  const st=S.settings,doc=await PDFDocument.create();doc.setTitle('Salaires '+moisLabel(m));doc.setAuthor('SOGEI');
+  const [bg]=await doc.embedPdf(ASSETS.tpl.slice(0),[0]);const H=bg.height,W=bg.width;
+  const reg=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
+  const img=st.cachet!==false?await doc.embedJpg(ASSETS.cachet.slice(0)):null;
+  const ink=rgb(.133,.133,.133),black=rgb(0,0,0),blue=rgb(0x2f/255,0x54/255,0x96/255),white=rgb(1,1,1),grey=rgb(.955,.96,.97),rule=rgb(.82,.84,.88),light=rgb(.92,.945,.985);
+  const cP=rgb(.86,.94,.89),cD=rgb(.98,.92,.8),cA=rgb(.98,.87,.86);
+  const XL=99,XR=548;
+  for(const e of list){
+    const r=recapEmp(e,m),J=joursMois(m),av=S.avances.filter(a=>a.empId===e.id&&a.date.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date));
+    const page=doc.addPage([W,H]);page.drawPage(bg,{x:0,y:0,width:W,height:H});
+    const text=(t,x,yy,f,sz,c)=>page.drawText(safe(t),{x,y:H-yy,size:sz,font:f,color:c||ink});
+    const rtext=(t,x,yy,f,sz,c)=>text(t,x-f.widthOfTextAtSize(safe(t),sz),yy,f,sz,c);
+    const rect=(x,yt,w,h,o)=>page.drawRectangle(Object.assign({x,y:H-(yt+h),width:w,height:h},o));
+    const title='ÉTAT DE SALAIRE — '+moisLabel(m).toUpperCase();
+    text(title,(XL+XR)/2-bold.widthOfTextAtSize(safe(title),17)/2,150,bold,17,black);
+    let y=172;
+    rect(XL,y,XR-XL,44,{borderColor:blue,borderWidth:.9});
+    text('SALARIÉ',XL+8,y+12,bold,9,blue);text(e.nom,XL+8,y+28,bold,12,black);
+    text([e.poste,e.tel].filter(Boolean).join(' · '),XL+8,y+40,reg,9.5,ink);
+    rtext(e.type==='mois'?'Salaire mensuel : '+DT(num(e.salaire)):'Salaire journalier : '+DT(num(e.salaire)),XR-8,y+28,reg,10.5,black);
+    y+=62;
+    // Calendrier
+    text('Présence jour par jour',XL,y,bold,11,blue);y+=8;
+    const cw=(XR-XL)/7,ch=26,first=(new Date(J[0]+'T12:00:00').getDay()+6)%7;
+    ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].forEach((d,k)=>{rect(XL+k*cw,y,cw,16,{color:blue});const w=bold.widthOfTextAtSize(d,9);text(d,XL+k*cw+cw/2-w/2,y+11.5,bold,9,white)});
+    y+=16;
+    J.forEach((d,k)=>{const pos=first+k,col=pos%7,row=Math.floor(pos/7),x=XL+col*cw,yy=y+row*ch;const v=(S.pointage[d]||{})[e.id];
+      rect(x,yy,cw,ch,{color:v==='P'?cP:v==='D'?cD:v==='A'?cA:white,borderColor:rule,borderWidth:.5});
+      text(String(+d.slice(8)),x+4,yy+10,reg,8,ink);
+      const lab=v==='P'?'P':v==='D'?'1/2':v==='A'?'A':'';if(lab){const w=bold.widthOfTextAtSize(lab,11);text(lab,x+cw/2-w/2,yy+21,bold,11,black)}});
+    y+=Math.ceil((first+J.length)/7)*ch+8;
+    text('P = présent   1/2 = demi-journée   A = absent   (vide = non pointé)',XL,y,reg,8.5,ink);y+=20;
+    // Récapitulatif
+    const rows=[['Jours présents',String(r.P)],['Demi-journées',String(r.D)],['Absences',String(r.A)],['Jours travaillés',String(r.jours).replace('.',',')],['Salaire dû',DT(r.du)]];
+    rows.forEach(([l,v],k)=>{if(k%2===0)rect(XL,y,XR-XL,18,{color:grey});text(l,XL+8,y+12.5,reg,10.5,ink);rtext(v,XR-8,y+12.5,bold,10.5,black);y+=18});
+    y+=8;
+    text('Acomptes reçus dans le mois',XL,y+10,bold,11,blue);y+=16;
+    if(av.length)av.forEach(a=>{text(frD(a.date)+(a.note?' — '+a.note:''),XL+8,y+11,reg,10,ink);rtext('-'+DT(num(a.montant)),XR-8,y+11,reg,10,black);y+=15;page.drawLine({start:{x:XL,y:H-y},end:{x:XR,y:H-y},thickness:.5,color:rule})});
+    else{text('Aucun acompte.',XL+8,y+11,reg,10,ink);y+=15}
+    text('Total acomptes',XL+8,y+13,bold,10.5,ink);rtext((r.av?'-':'')+DT(r.av),XR-8,y+13,bold,10.5,black);y+=22;
+    rect(XL,y,XR-XL,26,{color:light,borderColor:blue,borderWidth:1});
+    text('NET À PAYER',XL+8,y+17,bold,12.5,blue);rtext(DT(r.net),XR-8,y+17,bold,12.5,blue);y+=36;
+    text(enLettres(Math.max(0,r.net))+'.',XL,y,reg,9.5,ink);y+=26;
+    // Signatures
+    const sy=Math.min(y,690);
+    text('Signature du salarié',XL+10,sy,bold,10.5,black);rect(XL,sy+6,190,62,{borderColor:rule,borderWidth:.8});
+    const SX=448;[st.signataire,st.fonction].forEach((t,k)=>{if(!t)return;const w=bold.widthOfTextAtSize(safe(t),10.5);text(t,SX-w/2,sy+k*13,bold,10.5,black)});
+    if(img){const w=64,h=w*img.height/img.width;page.drawImage(img,{x:SX-w/2,y:H-(sy+22+h),width:w,height:h})}
+  }
+  return doc.save();
+}
+async function sharePaie(list,m){
+  if(!list.length)return toast('Aucun salarié');
+  try{toast('Création du PDF…');const b=await paiePdf(list,m);
+    const nm=list.length===1?String(list[0].nom).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_'):'tous';
+    const name='Salaire_'+nm+'_'+m+'.pdf';const r=await shareBlob(new Blob([b],{type:'application/pdf'}),name,name);if(r!=='abort')toast(r==='shared'?'PDF partagé':'PDF téléchargé')}
+  catch(err){console.error(err);toast('Erreur PDF : '+err.message)}
 }
 
 /* ---------- Caisse ---------- */
@@ -840,7 +936,7 @@ function params(){
   confirmBtn($('#wipe'),()=>{S=JSON.parse(JSON.stringify(DEF));save();toast('Données effacées');go('#/')});
 }
 
-window.__sogeiG={get S(){return S},docPdf,enLettres,docTotals,recapEmp,journal,stockOf,nextNum};
+window.__sogeiG={get S(){return S},docPdf,paiePdf,enLettres,docTotals,recapEmp,journal,stockOf,nextNum};
 if(DEMO){document.documentElement.classList.add('demo');$('.mark').insertAdjacentHTML('afterend','<span class="tag" style="background:#f0b44c;color:#3a2600">DÉMO</span>')}
 (needDemo?fetch('demo.json',{cache:'no-store'}).then(r=>r.json()).then(o=>{S=o;S.demoLoaded=true;for(const k in DEF)if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]));S.settings=Object.assign({},DEF.settings,S.settings);save()}).catch(()=>{V.innerHTML='<div class="card"><b>Impossible de charger la démo.</b><p class="hint">Vérifiez la connexion internet puis réessayez.</p><button class="primary" onclick="location.reload()">Réessayer</button></div>';throw 0}):Promise.resolve()).then(route,()=>{});
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
