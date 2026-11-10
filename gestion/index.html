@@ -126,11 +126,17 @@ try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
 for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
 S.settings=Object.assign({},DEF.settings,S.settings);
+// Client passager : toujours présent, non supprimable
+const PASS='passager';
+if(!S.clients.some(c=>c.id===PASS))S.clients.unshift({id:PASS,nom:'Client passager',tel:'',adresse:'',notes:'Client de passage (nom facultatif sur chaque chantier, devis ou facture)'});
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Mémoire pleine : faites une sauvegarde')}}
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const ym=d=>String(d||'').slice(0,7);
 const byId=(arr,id)=>S[arr].find(x=>x.id===id);
+// Nom affiché : pour le client passager, le nom saisi sur le document s'il existe
+function cName(o){const c=byId('clients',o.clientId);if(o.clientId==='passager'&&o.nomLibre)return o.nomLibre+' (passager)';return c?c.nom:'?'}
+const sortC=(a,b)=>(b.id==='passager')-(a.id==='passager')||a.nom.localeCompare(b.nom);
 
 /* =================== Outils =================== */
 const $=s=>document.querySelector(s);
@@ -233,7 +239,8 @@ function fields(spec,obj){
   }).join('')+'</div>';
 }
 function read(spec,obj){spec.forEach(f=>{const el=document.getElementById('f_'+f.k);if(!el)return;obj[f.k]=f.t==='check'?el.checked:el.value.trim()});return obj}
-const clientOpts=()=>[['','— Choisir —'],...S.clients.slice().sort((a,b)=>a.nom.localeCompare(b.nom)).map(c=>[c.id,c.nom])];
+function passToggle(){const sel=$('#f_clientId');if(!sel)return;const up=()=>['f_nomLibre','f_telLibre'].forEach(k=>{const e=document.getElementById(k);if(e)e.closest('label').hidden=sel.value!=='passager'});sel.addEventListener('change',up);up()}
+const clientOpts=()=>[['','— Choisir —'],...S.clients.slice().sort(sortC).map(c=>[c.id,c.id==='passager'?'🚶 '+c.nom:c.nom])];
 
 /* =================== Rendu / routes =================== */
 const V=$('#view');
@@ -302,7 +309,7 @@ function clientItem(c){
 function clients(){
   tab('clients');setHead('Clients',{act:'<button class="small" onclick="location.hash=\'#/client-edit/new\'">+ Nouveau</button>'});
   V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un client, un téléphone…"><div class="card"><div class="list" id="L"></div></div>`;
-  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort((a,b)=>a.nom.localeCompare(b.nom));$('#L').innerHTML=L.map(clientItem).join('')||`<div class="empty">${S.clients.length?'Aucun résultat.':'Aucun client. Touchez « + Nouveau ».'}</div>`};
+  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort(sortC);$('#L').innerHTML=L.map(clientItem).join('')||`<div class="empty">${S.clients.length?'Aucun résultat.':'Aucun client. Touchez « + Nouveau ».'}</div>`};
   $('#q').oninput=draw;draw();
 }
 const CLIENT_F=[{k:'nom',l:'Nom / raison sociale',full:1},{k:'tel',l:'Téléphone',t:'tel'},{k:'tel2',l:'Autre téléphone',t:'tel'},{k:'adresse',l:'Adresse / localité',full:1},{k:'gps',l:'Position GPS ou lien Maps',full:1,ph:'34.74, 10.76'},{k:'mf',l:'Matricule fiscal (si société)',full:1},{k:'notes',l:'Notes',t:'textarea'}];
@@ -317,7 +324,8 @@ function clientEdit(id){
     const i=S.clients.findIndex(x=>x.id===c.id);if(i<0)S.clients.push(c);else S.clients[i]=c;save();toast('Client enregistré');
     const back=new URLSearchParams(location.hash.split('?')[1]||'').get('back');
     if(back){sessionStorage.setItem('newClient',c.id);history.back()}else location.replace('#/client/'+c.id)};
-  if(!isNew){const d=$('#del');const used=S.interventions.some(x=>x.clientId===id)||S.docs.some(x=>x.clientId===id);
+  if(!isNew&&id==='passager')$('#del').remove();
+  else if(!isNew){const d=$('#del');const used=S.interventions.some(x=>x.clientId===id)||S.docs.some(x=>x.clientId===id);
     if(used){d.onclick=()=>toast('Client utilisé dans des chantiers ou factures : suppression impossible')}else confirmBtn(d,()=>{S.clients=S.clients.filter(x=>x.id!==id);save();go('#/clients')})}
 }
 function clientView(id){
@@ -344,7 +352,7 @@ const STATUTS=[['afaire','À faire','amber'],['encours','En cours','tag'],['term
 const typeL=k=>(TYPES.find(t=>t[0]===k)||[,k||''])[1];
 const statT=k=>{const s=STATUTS.find(t=>t[0]===k)||STATUTS[0];return `<span class="tag ${s[2]==='tag'?'':s[2]}">${s[1]}</span>`};
 function interItem(i){const c=byId('clients',i.clientId);const f=i.factureId&&byId('docs',i.factureId);
-  return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(c?c.nom:'?')}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}</div></a>`}
+  return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(cName(i))}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}</div></a>`}
 let interFilter='actives';
 function interventions(){
   tab('interventions');setHead('Chantiers',{act:'<button class="small" onclick="location.hash=\'#/inter/new\'">+ Nouveau</button>'});
@@ -352,7 +360,7 @@ function interventions(){
   V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${interFilter===k?'on':''}">${l}</button>`).join('')}</div><input id="q" type="search" placeholder="Rechercher…"><div class="card"><div class="list" id="L"></div></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();
     let L=S.interventions.filter(i=>{if(interFilter==='actives')return i.statut==='afaire'||i.statut==='encours';if(interFilter==='afacturer')return i.statut==='termine'&&!i.factureId;return true});
-    L=L.filter(i=>{const c=byId('clients',i.clientId);return ((c?c.nom:'')+' '+typeL(i.type)+' '+(i.lieu||'')+' '+(i.description||'')).toLowerCase().includes(q)});
+    L=L.filter(i=>{return (cName(i)+' '+typeL(i.type)+' '+(i.lieu||'')+' '+(i.description||'')).toLowerCase().includes(q)});
     L.sort((a,b)=>interFilter==='actives'?(a.date||'').localeCompare(b.date||''):(b.date||'').localeCompare(a.date||''));
     $('#L').innerHTML=L.map(interItem).join('')||'<div class="empty">Aucune intervention.</div>'};
   V.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>{interFilter=b.dataset.f;interventions()});
@@ -367,7 +375,7 @@ function interEdit(id){
   const nc=sessionStorage.getItem('newClient');if(nc){i.clientId=nc;sessionStorage.removeItem('newClient')}
   const draft=sessionStorage.getItem('interDraft');if(draft&&isNew){Object.assign(i,JSON.parse(draft),{clientId:i.clientId||JSON.parse(draft).clientId});sessionStorage.removeItem('interDraft')}
   setHead(isNew?'Nouvelle intervention':'Intervention',{back:'#/interventions'});
-  const SPEC=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'type',l:'Type',t:'select',o:TYPES},{k:'statut',l:'Statut',t:'select',o:STATUTS.map(s=>[s[0],s[1]])},{k:'date',l:'Date prévue',t:'date'},{k:'lieu',l:'Lieu / forage'},{k:'description',l:'Travaux / remarques',t:'textarea'}];
+  const SPEC=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'nomLibre',l:'Nom du client passager (facultatif)'},{k:'telLibre',l:'Téléphone (facultatif)',t:'tel'},{k:'type',l:'Type',t:'select',o:TYPES},{k:'statut',l:'Statut',t:'select',o:STATUTS.map(s=>[s[0],s[1]])},{k:'date',l:'Date prévue',t:'date'},{k:'lieu',l:'Lieu / forage'},{k:'description',l:'Travaux / remarques',t:'textarea'}];
   const emps=S.employes.filter(e=>e.actif!==false||(i.employes||[]).includes(e.id));
   const f=i.factureId&&byId('docs',i.factureId);
   V.innerHTML=`<div class="card">${fields(SPEC,i)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
@@ -377,6 +385,7 @@ function interEdit(id){
     ${f?`<a class="btn" href="#/doc/${f.id}">🧾 Voir la facture ${esc(f.num)}</a>`:`<div class="row"><button class="grow" id="mkDevis">Faire un devis</button><button class="grow primary" id="mkFact">Facturer</button></div>`}
   </div>`}
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  passToggle();
   V.querySelectorAll('#E button').forEach(b=>b.onclick=()=>b.classList.toggle('on'));
   const collect=()=>{read(SPEC,i);i.employes=[...V.querySelectorAll('#E button.on')].map(b=>b.dataset.e);return i};
   $('#newC').onclick=()=>{collect();sessionStorage.setItem('interDraft',JSON.stringify(Object.assign({},i,{id:undefined})));go('#/client-edit/new?back=1')};
@@ -391,7 +400,7 @@ function interEdit(id){
 
 /* ---------- Devis / factures ---------- */
 function docItem(d){const c=byId('clients',d.clientId),[l,cl]=docEtat(d),t=docTotals(d).ttc,r=d.kind==='facture'?reste(d):0;
-  return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(c?c.nom:'?')}</b><small>${d.kind==='devis'?'Devis':'Facture'} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
+  return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(cName(d))}</b><small>${d.kind==='devis'?'Devis':'Facture'} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
 let docFilter='factures';
 function docs(){
   tab('docs');
@@ -401,7 +410,7 @@ function docs(){
   V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${docFilter===k?'on':''}">${l}</button>`).join('')}<button onclick="location.hash='#/doc-edit/new?k=devis'">+ Devis</button></div><input id="q" type="search" placeholder="Numéro, client…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();
     let L=S.docs.filter(d=>docFilter==='devis'?d.kind==='devis':d.kind==='facture'&&(docFilter!=='impayees'||reste(d)>0.0005));
-    L=L.filter(d=>{const c=byId('clients',d.clientId);return (d.num+' '+(c?c.nom:'')).toLowerCase().includes(q)}).sort((a,b)=>b.date.localeCompare(a.date)||b.num.localeCompare(a.num));
+    L=L.filter(d=>{return (d.num+' '+cName(d)).toLowerCase().includes(q)}).sort((a,b)=>b.date.localeCompare(a.date)||b.num.localeCompare(a.num));
     $('#L').innerHTML=L.map(docItem).join('')||'<div class="empty">Aucun document.</div>';
     $('#T').textContent=L.length?L.length+' document(s) · total '+DT(L.reduce((a,d)=>a+(docFilter==='impayees'?reste(d):docTotals(d).ttc),0)):''};
   V.querySelectorAll('.chips button[data-f]').forEach(b=>b.onclick=()=>{docFilter=b.dataset.f;history.replaceState(null,'','#/docs');docs()});
@@ -415,13 +424,14 @@ function docEdit(id){
   if(isNew){const k=qs.get('k')==='devis'?'devis':'facture';
     d={id:uid(),kind:k,date:today(),clientId:qs.get('c')||'',interventionId:qs.get('i')||'',lignes:[{des:'',qte:'1',pu:''}],tva:S.settings.tva,timbre:k==='facture'?S.settings.timbre:0,remise:'',statut:'brouillon',notes:'',validite:'30'};
     const inter=d.interventionId&&byId('interventions',d.interventionId);
+    if(inter){d.nomLibre=inter.nomLibre||'';d.telLibre=inter.telLibre||''}
     if(inter)d.lignes=[{des:typeL(inter.type)+(inter.lieu?' — '+inter.lieu:''),qte:'1',pu:''}];
   }else{d=JSON.parse(JSON.stringify(byId('docs',id)||{}));if(!d.id)return go('#/docs')}
   const nc=sessionStorage.getItem('newClient');if(nc){d.clientId=nc;sessionStorage.removeItem('newClient')}
   const dr=sessionStorage.getItem('docDraft');if(dr&&isNew){const o=JSON.parse(dr);Object.assign(d,o,{id:d.id,clientId:d.clientId||o.clientId});sessionStorage.removeItem('docDraft')}
   const isF=d.kind==='facture';
   setHead((isNew?'Nouvelle ':'')+(isF?'facture':'devis')+(d.num?' '+d.num:''),{back:'#/docs'});
-  const HEAD=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'date',l:'Date',t:'date'},isF?{k:'echeance',l:'Échéance (facultatif)',t:'date'}:{k:'validite',l:'Validité (jours)',t:'number'}];
+  const HEAD=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'nomLibre',l:'Nom du client passager (facultatif)'},{k:'telLibre',l:'Téléphone (facultatif)',t:'tel'},{k:'date',l:'Date',t:'date'},isF?{k:'echeance',l:'Échéance (facultatif)',t:'date'}:{k:'validite',l:'Validité (jours)',t:'number'}];
   V.innerHTML=`<datalist id="arts">${S.articles.map(a=>`<option value="${esc(a.des)}">`).join('')}</datalist>
   <div class="card">${fields(HEAD,d)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
   <div class="card"><h2>Lignes <span class="hint" style="text-transform:none;letter-spacing:0">prix HT en DT</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
@@ -429,6 +439,7 @@ function docEdit(id){
   <div class="totals" id="TOT"></div></div>
   <div class="card"><label>Notes (apparaissent sur le PDF)<textarea id="notes" placeholder="Conditions, garantie, délai…">${esc(d.notes||'')}</textarea></label></div>
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
+  passToggle();
   const LN=$('#LN');
   function drawLines(){
     LN.innerHTML=d.lignes.map((l,k)=>`<div class="line" data-k="${k}">
@@ -437,12 +448,11 @@ function docEdit(id){
       <label>P.U. HT<input data-f="pu" inputmode="decimal" value="${esc(l.pu)}"></label>
       <label>Total HT<span class="ltot" data-tot>${dt(num(l.qte)*num(l.pu))}</span></label>
       <button class="ghost danger small" data-del aria-label="Supprimer la ligne">✕</button>
-      ${l.articleId?`<p class="hint full" style="grid-column:1/-1">📦 Article du stock${isF?' — sortie de stock à l’enregistrement':''}</p>`:''}</div>`).join('');
+      <p class="hint" data-art style="grid-column:1/-1"${l.articleId?'':' hidden'}>📦 Article du stock${isF?' — sortie de stock à l’enregistrement':''}</p></div>`).join('');
     LN.querySelectorAll('.line').forEach(row=>{const k=+row.dataset.k;
       row.querySelectorAll('input[data-f]').forEach(inp=>inp.oninput=()=>{const l=d.lignes[k];l[inp.dataset.f]=inp.value;
-        if(inp.dataset.f==='des'){const a=S.articles.find(a=>a.des===inp.value);if(a){l.articleId=a.id;if(!l.pu){l.pu=String(a.pv||'');row.querySelector('[data-f=pu]').value=l.pu}}else delete l.articleId}
+        if(inp.dataset.f==='des'){const a=S.articles.find(a=>a.des===inp.value);if(a){l.articleId=a.id;if(!l.pu){l.pu=String(a.pv||'');row.querySelector('[data-f=pu]').value=l.pu}}else delete l.articleId;row.querySelector('[data-art]').hidden=!l.articleId}
         row.querySelector('[data-tot]').textContent=dt(num(l.qte)*num(l.pu));tot()});
-      row.querySelector('input[data-f=des]').onchange=()=>drawLines();
       row.querySelector('[data-del]').onclick=()=>{d.lignes.splice(k,1);if(!d.lignes.length)d.lignes.push({des:'',qte:'1',pu:''});drawLines();tot()};
     });
   }
@@ -472,8 +482,8 @@ function docView(id){
   const pays=S.paiements.filter(p=>p.docId===id).sort((a,b)=>a.date.localeCompare(b.date));
   const dv=d.fromDevis&&byId('docs',d.fromDevis),fa=d.factureId&&byId('docs',d.factureId);
   V.innerHTML=`<div class="card">
-    <div class="row"><b class="grow">${esc(c.nom||'?')}</b><span class="tag ${ec}">${el}</span></div>
-    <p class="hint">${frD(d.date)}${c.tel?' · '+esc(c.tel):''}${dv?` · issue du devis <a href="#/doc/${dv.id}">${esc(dv.num)}</a>`:''}${fa?` · facturé : <a href="#/doc/${fa.id}">${esc(fa.num)}</a>`:''}</p>
+    <div class="row"><b class="grow">${esc(cName(d))}</b><span class="tag ${ec}">${el}</span></div>
+    <p class="hint">${frD(d.date)}${(d.clientId==='passager'?d.telLibre:c.tel)?' · '+esc(d.clientId==='passager'?d.telLibre:c.tel):''}${dv?` · issue du devis <a href="#/doc/${dv.id}">${esc(dv.num)}</a>`:''}${fa?` · facturé : <a href="#/doc/${fa.id}">${esc(fa.num)}</a>`:''}</p>
     <div class="list">${d.lignes.map(l=>`<div class="item" style="min-height:0"><div class="t"><b style="white-space:normal">${esc(l.des)}</b><small>${esc(l.qte)} × ${dt(num(l.pu))}</small></div><div class="r money">${dt(num(l.qte)*num(l.pu))}</div></div>`).join('')}</div>
     <div class="totals"><span>Total HT</span><b>${DT(t.ht)}</b>${t.remise?`<span>Remise</span><b>−${DT(t.remise)}</b>`:''}<span>TVA ${esc(d.tva)} %</span><b>${DT(t.tva)}</b>${isF?`<span>Timbre</span><b>${DT(t.timbre)}</b>`:''}<span class="big">Total TTC</span><span class="big">${DT(t.ttc)}</span>
     ${isF?`<span>Payé</span><b style="color:var(--ok)">${DT(paye(d))}</b><span>Reste dû</span><b style="color:${reste(d)>0.0005?'var(--warn)':'var(--ok)'}">${DT(reste(d))}</b>`:''}</div>
@@ -491,7 +501,7 @@ function docView(id){
     if($('#addP'))$('#addP').onclick=()=>{const m=num($('#pm').value);if(m<=0)return toast('Montant invalide');S.paiements.push({id:uid(),docId:id,date:$('#pd').value||today(),montant:m,mode:$('#pmode').value,note:$('#pn').value.trim()});save();toast('Paiement enregistré');docView(id)};
   }else{
     V.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{d.statut=b.dataset.st;save();docView(id)});
-    if($('#toF'))$('#toF').onclick=()=>{const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:S.settings.timbre,remise:d.remise,notes:d.notes,fromDevis:d.id};
+    if($('#toF'))$('#toF').onclick=()=>{const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:S.settings.timbre,remise:d.remise,notes:d.notes,fromDevis:d.id};
       f.num=nextNum('facture',f.date);S.docs.push(f);d.factureId=f.id;d.statut='accepte';
       if(f.interventionId){const it=byId('interventions',f.interventionId);if(it){it.factureId=f.id;it.statut='termine'}}
       applyStock(f);save();toast('Facture '+f.num+' créée');go('#/doc/'+f.id)};
@@ -526,7 +536,7 @@ async function docPdf(d){
   y=172;
   // Bloc société (gauche) / client (droite)
   const leftL=[st.mf?'MF : '+st.mf:'',st.rc?'RC : '+st.rc:'','Date : '+frD(d.date),isF&&d.echeance?'Échéance : '+frD(d.echeance):'',!isF&&d.validite?'Validité : '+d.validite+' jours':''].filter(Boolean);
-  const cl=[c.nom||'',c.adresse||'',c.tel?'Tél : '+c.tel:'',c.mf?'MF : '+c.mf:''].filter(Boolean);
+  const isP=d.clientId==='passager';const cl=(isP?[d.nomLibre||'Client passager',d.telLibre?'Tél : '+d.telLibre:'']:[c.nom||'',c.adresse||'',c.tel?'Tél : '+c.tel:'',c.mf?'MF : '+c.mf:'']).filter(Boolean);
   const bx=330,bw=XR-bx,bh=18+cl.length*14;
   rect(bx,y,bw,bh,{borderColor:blue,borderWidth:.9});
   text('CLIENT',bx+8,y+12,bold,9,blue);
@@ -574,7 +584,7 @@ async function docPdf(d){
   const pages=doc.getPages();if(pages.length>1)pages.forEach((p,k)=>p.drawText((k+1)+' / '+pages.length,{x:XR-20,y:H-775,size:8,font:reg,color:ink}));
   return doc.save();
 }
-function pdfName(d){const c=byId('clients',d.clientId)||{};const n=String(c.nom||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');return (d.kind==='facture'?'Facture_':'Devis_')+d.num+(n?'_'+n:'')+'.pdf'}
+function pdfName(d){const c=byId('clients',d.clientId)||{};const n=String(d.clientId==='passager'?(d.nomLibre||'passager'):(c.nom||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');return (d.kind==='facture'?'Facture_':'Devis_')+d.num+(n?'_'+n:'')+'.pdf'}
 async function shareBlob(blob,name,title){
   let file=null;try{file=new File([blob],name,{type:blob.type})}catch(e){}
   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title});return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
