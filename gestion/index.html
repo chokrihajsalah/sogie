@@ -370,7 +370,7 @@ function interEdit(id){
   tab('interventions');
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');
   const isNew=id.startsWith('new');
-  const i=isNew?{id:uid(),date:today(),type:'essai',statut:'afaire',clientId:qs.get('c')||'',employes:[]}:JSON.parse(JSON.stringify(byId('interventions',id)||{}));
+  const i=isNew?{id:uid(),date:today(),type:'essai',statut:'afaire',clientId:qs.get('c')||'passager',employes:[]}:JSON.parse(JSON.stringify(byId('interventions',id)||{}));
   if(!i.id)return go('#/interventions');
   const nc=sessionStorage.getItem('newClient');if(nc){i.clientId=nc;sessionStorage.removeItem('newClient')}
   const draft=sessionStorage.getItem('interDraft');if(draft&&isNew){Object.assign(i,JSON.parse(draft),{clientId:i.clientId||JSON.parse(draft).clientId});sessionStorage.removeItem('interDraft')}
@@ -422,7 +422,7 @@ function docEdit(id){
   const isNew=id==='new';
   let d;
   if(isNew){const k=qs.get('k')==='devis'?'devis':'facture';
-    d={id:uid(),kind:k,date:today(),clientId:qs.get('c')||'',interventionId:qs.get('i')||'',lignes:[{des:'',qte:'1',pu:''}],tva:S.settings.tva,timbre:k==='facture'?S.settings.timbre:0,remise:'',statut:'brouillon',notes:'',validite:'30'};
+    d={id:uid(),kind:k,date:today(),clientId:qs.get('c')||'passager',interventionId:qs.get('i')||'',lignes:[{des:'',qte:'1',pu:''}],tva:S.settings.tva,timbre:k==='facture'?S.settings.timbre:0,remise:'',statut:'brouillon',notes:'',validite:'30'};
     const inter=d.interventionId&&byId('interventions',d.interventionId);
     if(inter){d.nomLibre=inter.nomLibre||'';d.telLibre=inter.telLibre||''}
     if(inter)d.lignes=[{des:typeL(inter.type)+(inter.lieu?' — '+inter.lieu:''),qte:'1',pu:''}];
