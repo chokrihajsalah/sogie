@@ -210,7 +210,7 @@ const DEF={
 };
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-const DEMO_V=3; // à augmenter quand demo.json change
+const DEMO_V=4; // à augmenter quand demo.json change
 const needDemo=DEMO&&(!S||typeof S!=='object'||!S.demoLoaded||S.demoV!==DEMO_V);
 if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
 for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
@@ -310,14 +310,6 @@ function journal(){
   S.paiements.forEach(p=>{const d=byId('docs',p.docId),c=d&&byId('clients',d.clientId);L.push({id:p.id,date:p.date,montant:num(p.montant),lib:'Paiement '+(d?d.num:'')+(c?' — '+c.nom:'')+(p.mode?' ('+p.mode+')':''),src:'paiement',docId:p.docId})});
   S.avances.forEach(a=>{const e=byId('employes',a.empId);L.push({id:a.id,date:a.date,montant:-num(a.montant),lib:'Acompte salaire — '+(e?e.nom:''),src:'avance'})});
   return L.sort((a,b)=>b.date.localeCompare(a.date));
-}
-function recapEmp(e,m){
-  let P=0,D=0,A=0;
-  Object.keys(S.pointage).filter(d=>d.startsWith(m)).forEach(d=>{const v=S.pointage[d][e.id];if(v==='P')P++;else if(v==='D')D++;else if(v==='A')A++});
-  const jours=P+D/2;
-  const du=e.type==='mois'?num(e.salaire):r3(jours*num(e.salaire));
-  const av=r3(S.avances.filter(a=>a.empId===e.id&&a.date.startsWith(m)).reduce((s,a)=>s+num(a.montant),0));
-  return {P,D,A,jours,du,av,net:r3(du-av)};
 }
 
 /* =================== Formulaires =================== */
@@ -833,7 +825,7 @@ function plus(){
     <a class="tile" href="#/stock"><span>📦</span><b>Stock</b><small>${S.articles.length} articles${bas?' · '+bas+' bas':''}</small></a>
     <a class="tile" href="#/equipe"><span>👷</span><b>Équipe</b><small>${S.employes.filter(e=>e.actif!==false).length} salariés</small></a>
     <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
-    <a class="tile money-only" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, acomptes, fiche PDF</small></a>
+    <a class="tile money-only" href="#/paie"><span>💰</span><b>Salaires</b><small>Par semaine ou par mois</small></a>
     <a class="tile money-only" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
     <a class="tile money-only" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
     <a class="tile" href="#/rapports"><span>📄</span><b>Rapports d'essai</b><small>${S.interventions.filter(rapFait).length} rapports</small></a>
@@ -880,9 +872,9 @@ function equipe(){
   tab('plus');setHead('Équipe',{back:'#/plus',act:'<button class="small" onclick="location.hash=\'#/employe/new\'">+ Salarié</button>'});
   const L=S.employes.slice().sort((a,b)=>(b.actif!==false)-(a.actif!==false)||a.nom.localeCompare(b.nom));
   V.innerHTML=`<div class="row"><a class="btn grow primary" href="#/pointage">🕘 Pointage</a><a class="btn grow" href="#/paie">💰 Salaires du mois</a></div>
-  <div class="card"><div class="list">${L.map(e=>`<a class="item" href="#/employe/${e.id}"><div class="t"><b>${esc(e.nom)}${e.actif===false?' <span class="tag grey">Parti</span>':''}</b><small>${esc([e.poste,e.tel].filter(Boolean).join(' · '))}</small></div><div class="r">${e.salaire?dt(num(e.salaire))+'<small>DT / '+(e.type==='mois'?'mois':'jour')+'</small>':''}</div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div></div>`;
+  <div class="card"><div class="list">${L.map(e=>`<a class="item" href="#/employe/${e.id}"><div class="t"><b>${esc(e.nom)}${e.actif===false?' <span class="tag grey">Parti</span>':''}</b><small>${esc([e.poste,e.tel].filter(Boolean).join(' · '))}</small></div><div class="r">${e.salaire?dt(num(e.salaire))+'<small>DT / '+UNIT_L[e.type||'jour']+'</small>':''}</div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div></div>`;
 }
-const EMP_F=[{k:'nom',l:'Nom et prénom',full:1},{k:'poste',l:'Poste',ph:'Technicien, chauffeur…'},{k:'tel',l:'Téléphone',t:'tel'},{k:'type',l:'Payé',t:'select',o:[['jour','à la journée'],['mois','au mois']]},{k:'salaire',l:'Salaire (DT)',t:'number'},{k:'embauche',l:'Date d’embauche',t:'date'},{k:'actif',l:'Toujours dans l’entreprise',t:'check'}];
+const EMP_F=[{k:'nom',l:'Nom et prénom',full:1},{k:'poste',l:'Poste',ph:'Technicien, chauffeur…'},{k:'tel',l:'Téléphone',t:'tel'},{k:'type',l:'Payé',t:'select',o:[['jour','à la journée'],['semaine','à la semaine'],['mois','au mois']]},{k:'salaire',l:'Salaire (DT par jour / semaine / mois)',t:'number'},{k:'embauche',l:'Date d’embauche',t:'date'},{k:'actif',l:'Toujours dans l’entreprise',t:'check'}];
 function employeEdit(id){
   tab('plus');const isNew=id==='new';const e=isNew?{id:uid(),type:'jour',actif:true}:Object.assign({},byId('employes',id));if(!e.nom&&!isNew)return go('#/equipe');
   setHead(isNew?'Nouveau salarié':e.nom,{back:'#/equipe'});
@@ -915,35 +907,68 @@ function pointage(){
   const shift=n=>{const x=new Date(pDate+'T12:00:00');x.setDate(x.getDate()+n);pDate=x.toISOString().slice(0,10);pointage()};
   $('#prv').onclick=()=>shift(-1);$('#nxt').onclick=()=>shift(1);$('#pd').onchange=()=>{pDate=$('#pd').value||today();pointage()};
 }
-let pMois=null;
+// Période de paie : semaine (lundi → dimanche) ou mois
+let pPer=null;
+const TYPE_L={jour:'à la journée',semaine:'à la semaine',mois:'au mois'},UNIT_L={jour:'jour',semaine:'semaine',mois:'mois'};
+const isoD=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+function lundi(iso){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return isoD(d)}
+function perCur(){if(!pPer)pPer={mode:'mois',key:ym(today())};return pPer}
+function perDays(P){if(P.mode==='mois')return joursMois(P.key);const d=new Date(P.key+'T12:00:00');return Array.from({length:7},(_,k)=>{const x=new Date(d);x.setDate(d.getDate()+k);return isoD(x)})}
+function perLabel(P){if(P.mode==='mois')return moisLabel(P.key);const J=perDays(P),a=new Date(J[0]+'T12:00:00'),b=new Date(J[6]+'T12:00:00');
+  return 'Semaine du '+a.getDate()+(a.getMonth()!==b.getMonth()?' '+MOIS[a.getMonth()]:'')+' au '+b.getDate()+' '+MOIS[b.getMonth()]+' '+b.getFullYear()}
+function perShift(P,n){if(P.mode==='mois'){const [y,m]=P.key.split('-').map(Number);const d=new Date(y,m-1+n,1);return {mode:'mois',key:isoD(d).slice(0,7)}}
+  const d=new Date(P.key+'T12:00:00');d.setDate(d.getDate()+7*n);return {mode:'semaine',key:isoD(d)}}
+function recapPer(e,P){
+  const J=perDays(P),set=new Set(J);let Pr=0,D=0,A=0;
+  J.forEach(d=>{const v=(S.pointage[d]||{})[e.id];if(v==='P')Pr++;else if(v==='D')D++;else if(v==='A')A++});
+  const jours=Pr+D/2,t=num(e.salaire),type=e.type||'jour';
+  let du;
+  if(type==='jour')du=jours*t;
+  else if(type==='semaine')du=jours*t/6;            // 6 jours travaillés par semaine
+  else du=P.mode==='mois'?t:jours*t/26;              // 26 jours travaillés par mois
+  du=r3(du);
+  const av=r3(S.avances.filter(a=>a.empId===e.id&&set.has(a.date)).reduce((s,a)=>s+num(a.montant),0));
+  return {P:Pr,D,A,jours,du,av,net:r3(du-av)};
+}
+function recapEmp(e,m){return recapPer(e,{mode:'mois',key:m})}
+function perPicker(onChange){
+  const P=perCur();
+  const h=`<div class="card"><div class="seg" id="perMode"><button data-m="semaine" class="${P.mode==='semaine'?'on':''}">Par semaine</button><button data-m="mois" class="${P.mode==='mois'?'on':''}">Par mois</button></div>
+    <div class="row"><button class="small" id="perPrev">‹</button><b class="grow" style="text-align:center">${esc(perLabel(P))}</b><button class="small" id="perNext">›</button></div></div>`;
+  setTimeout(()=>{
+    V.querySelectorAll('#perMode button').forEach(b=>b.onclick=()=>{const m=b.dataset.m;if(m===P.mode)return;
+      const ref=P.mode==='mois'?(P.key===ym(today())?today():P.key+'-01'):P.key;
+      pPer=m==='mois'?{mode:'mois',key:ref.slice(0,7)}:{mode:'semaine',key:lundi(ref)};onChange()});
+    $('#perPrev').onclick=()=>{pPer=perShift(P,-1);onChange()};$('#perNext').onclick=()=>{pPer=perShift(P,1);onChange()};
+  });
+  return h;
+}
 function paie(){
-  tab('plus');pMois=pMois||ym(today());setHead('Salaires du mois',{back:'#/plus'});
-  const emps=S.employes.filter(e=>e.actif!==false||recapEmp(e,pMois).jours||recapEmp(e,pMois).av);
-  const R=emps.map(e=>[e,recapEmp(e,pMois)]);
+  tab('plus');const P=perCur();setHead('Salaires',{back:'#/plus'});
+  const emps=S.employes.filter(e=>{const r=recapPer(e,P);return e.actif!==false||r.jours||r.av});
+  const R=emps.map(e=>[e,recapPer(e,P)]);
   const tot=R.reduce((a,[,r])=>({du:a.du+r.du,av:a.av+r.av,net:a.net+r.net}),{du:0,av:0,net:0});
-  V.innerHTML=`<div class="card"><label>Mois<input type="month" id="m" value="${pMois}"></label></div>
-  <div class="card"><div class="list">${R.map(([e,r])=>`<a class="item" href="#/paie/${e.id}"><div class="t"><b>${esc(e.nom)}</b><small>${String(r.jours).replace('.',',')} j${r.A?' · '+r.A+' abs.':''} · dû ${dt(r.du)}${r.av?' · acomptes '+dt(r.av):''}</small></div><div class="r money">${dt(r.net)}<small>net DT ›</small></div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div>
+  V.innerHTML=perPicker(paie)+`
+  <div class="card"><div class="list">${R.map(([e,r])=>`<a class="item" href="#/paie/${e.id}"><div class="t"><b>${esc(e.nom)}</b><small>${String(r.jours).replace('.',',')} j${r.A?' · '+r.A+' abs.':''} · ${TYPE_L[e.type||'jour']} · dû ${dt(r.du)}${r.av?' · acomptes '+dt(r.av):''}</small></div><div class="r money">${dt(r.net)}<small>net DT ›</small></div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div>
   <div class="totals"><span>Total dû</span><b>${DT(tot.du)}</b><span>Acomptes</span><b>${tot.av?'−':''}${DT(tot.av)}</b><span class="big">Reste à payer</span><span class="big">${DT(tot.net)}</span></div></div>
   <button class="primary" id="pdfAll">📤 Fiches de tous les salariés (PDF)</button>
   <button id="sh">💬 Envoyer le récapitulatif (WhatsApp)</button>
-  <p class="hint">Touchez un salarié pour voir sa fiche du mois (jours, salaire, acomptes).</p>
-  <p class="hint">Payé à la journée : jours × salaire. Payé au mois : salaire fixe (absences affichées pour information).</p>`;
-  $('#m').onchange=()=>{pMois=$('#m').value||ym(today());paie()};
-  $('#pdfAll').onclick=()=>sharePaie(emps,pMois);
-  $('#sh').onclick=()=>{const t='SOGEI — Salaires '+moisLabel(pMois)+'\n'+R.map(([e,r])=>`• ${e.nom} : ${String(r.jours).replace('.',',')} j, dû ${dt(r.du)}, acomptes ${dt(r.av)}, net ${dt(r.net)} DT`).join('\n')+'\nTotal net : '+DT(tot.net);
+  <p class="hint">Touchez un salarié pour voir sa fiche (jours, salaire, acomptes).<br>À la journée : jours × salaire du jour. À la semaine : salaire de la semaine ÷ 6 × jours travaillés. Au mois : salaire fixe sur le mois (sur une semaine : ÷ 26 × jours).</p>`;
+  $('#pdfAll').onclick=()=>sharePaie(emps,P);
+  $('#sh').onclick=()=>{const t='SOGEI — Salaires — '+perLabel(P)+'\n'+R.map(([e,r])=>`• ${e.nom} : ${String(r.jours).replace('.',',')} j, dû ${dt(r.du)}, acomptes ${dt(r.av)}, net ${dt(r.net)} DT`).join('\n')+'\nTotal net : '+DT(tot.net);
     if(navigator.share)navigator.share({text:t}).catch(()=>{});else window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank')};
 }
 
-// Fiche mensuelle d'un salarié
+// Fiche d'un salarié sur la période
 function joursMois(m){const [y,mo]=m.split('-').map(Number),n=new Date(y,mo,0).getDate();return Array.from({length:n},(_,k)=>m+'-'+String(k+1).padStart(2,'0'))}
 function paieEmp(id){
-  tab('plus');pMois=pMois||ym(today());const e=byId('employes',id);if(!e)return go('#/paie');
+  tab('plus');const P=perCur();const e=byId('employes',id);if(!e)return go('#/paie');
   setHead(e.nom,{back:'#/paie'});
-  const r=recapEmp(e,pMois),J=joursMois(pMois),first=(new Date(J[0]+'T12:00:00').getDay()+6)%7;
-  const av=S.avances.filter(a=>a.empId===id&&a.date.startsWith(pMois)).sort((a,b)=>a.date.localeCompare(b.date));
+  const r=recapPer(e,P),J=perDays(P),set=new Set(J),first=(new Date(J[0]+'T12:00:00').getDay()+6)%7;
+  const av=S.avances.filter(a=>a.empId===id&&set.has(a.date)).sort((a,b)=>a.date.localeCompare(b.date));
   const L={P:'P',D:'½',A:'A'};
-  V.innerHTML=`<div class="card"><label>Mois<input type="month" id="m" value="${pMois}"></label></div>
-  <div class="card"><h2>${esc(moisLabel(pMois))}</h2><p class="hint">${esc(e.poste||'')} · payé ${e.type==='mois'?'au mois : '+DT(num(e.salaire)):'à la journée : '+DT(num(e.salaire))+' / jour'}</p>
+  V.innerHTML=perPicker(()=>paieEmp(id))+`
+  <div class="card"><h2>${esc(perLabel(P))}</h2><p class="hint">${esc(e.poste||'')} · payé ${TYPE_L[e.type||'jour']} : ${DT(num(e.salaire))} / ${UNIT_L[e.type||'jour']}</p>
     <div class="cal">${['L','M','M','J','V','S','D'].map(d=>`<b>${d}</b>`).join('')}${'<span class="x"></span>'.repeat(first)}${J.map(d=>{const v=(S.pointage[d]||{})[id];return `<span class="${v||''}">${+d.slice(8)}<small>${v?L[v]:'·'}</small></span>`}).join('')}</div>
     <p class="hint">P présent · ½ demi-journée · A absent · « · » non pointé</p></div>
   <div class="card"><h2>Salaire</h2><div class="totals">
@@ -951,16 +976,15 @@ function paieEmp(id){
     <span>Jours travaillés</span><b>${String(r.jours).replace('.',',')}</b>
     <span>Salaire dû</span><b>${DT(r.du)}</b><span>Acomptes (${av.length})</span><b style="color:var(--warn)">${r.av?'−':''}${DT(r.av)}</b>
     <span class="big">Net à payer</span><span class="big">${DT(r.net)}</span></div></div>
-  <div class="card"><h2>Acomptes du mois</h2><div class="list">${av.map(a=>`<div class="item" style="min-height:0"><div class="t"><b>${DT(num(a.montant))}</b><small>${frD(a.date)}${a.note?' · '+esc(a.note):''}</small></div></div>`).join('')||'<div class="empty">Aucun acompte ce mois.</div>'}</div>
+  <div class="card"><h2>Acomptes de la période</h2><div class="list">${av.map(a=>`<div class="item" style="min-height:0"><div class="t"><b>${DT(num(a.montant))}</b><small>${frD(a.date)}${a.note?' · '+esc(a.note):''}</small></div></div>`).join('')||'<div class="empty">Aucun acompte sur cette période.</div>'}</div>
     <a class="btn" href="#/employe/${id}">+ Donner un acompte</a></div>
   <button class="primary" id="pdf">📤 Envoyer la fiche (PDF)</button>`;
-  $('#m').onchange=()=>{pMois=$('#m').value||ym(today());paieEmp(id)};
-  $('#pdf').onclick=()=>sharePaie([e],pMois);
+  $('#pdf').onclick=()=>sharePaie([e],P);
 }
-async function paiePdf(list,m){
+async function paiePdf(list,P){if(typeof P==='string')P={mode:'mois',key:P};
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
   if(!ASSETS)ASSETS={tpl:b64(SOGEI_ASSETS.MODELE_B64),cachet:b64(SOGEI_ASSETS.CACHET_B64)};
-  const st=S.settings,doc=await PDFDocument.create();doc.setTitle('Salaires '+moisLabel(m));doc.setAuthor('SOGEI');
+  const st=S.settings,doc=await PDFDocument.create();doc.setTitle('Salaires — '+perLabel(P));doc.setAuthor('SOGEI');
   const [bg]=await doc.embedPdf(ASSETS.tpl.slice(0),[0]);const H=bg.height,W=bg.width;
   const reg=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
   const img=st.cachet!==false?await doc.embedJpg(ASSETS.cachet.slice(0)):null;
@@ -968,18 +992,18 @@ async function paiePdf(list,m){
   const cP=rgb(.86,.94,.89),cD=rgb(.98,.92,.8),cA=rgb(.98,.87,.86);
   const XL=99,XR=548;
   for(const e of list){
-    const r=recapEmp(e,m),J=joursMois(m),av=S.avances.filter(a=>a.empId===e.id&&a.date.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date));
+    const r=recapPer(e,P),J=perDays(P),set=new Set(J),av=S.avances.filter(a=>a.empId===e.id&&set.has(a.date)).sort((a,b)=>a.date.localeCompare(b.date));
     const page=doc.addPage([W,H]);page.drawPage(bg,{x:0,y:0,width:W,height:H});
     const text=(t,x,yy,f,sz,c)=>page.drawText(safe(t),{x,y:H-yy,size:sz,font:f,color:c||ink});
     const rtext=(t,x,yy,f,sz,c)=>text(t,x-f.widthOfTextAtSize(safe(t),sz),yy,f,sz,c);
     const rect=(x,yt,w,h,o)=>page.drawRectangle(Object.assign({x,y:H-(yt+h),width:w,height:h},o));
-    const title='ÉTAT DE SALAIRE — '+moisLabel(m).toUpperCase();
-    text(title,(XL+XR)/2-bold.widthOfTextAtSize(safe(title),17)/2,150,bold,17,black);
-    let y=172;
+    const title='ÉTAT DE SALAIRE',sub=perLabel(P);
+    text(title,(XL+XR)/2-bold.widthOfTextAtSize(safe(title),17)/2,146,bold,17,black);text(sub,(XL+XR)/2-reg.widthOfTextAtSize(safe(sub),11.5)/2,162,reg,11.5,blue);
+    let y=176;
     rect(XL,y,XR-XL,44,{borderColor:blue,borderWidth:.9});
     text('SALARIÉ',XL+8,y+12,bold,9,blue);text(e.nom,XL+8,y+28,bold,12,black);
     text([e.poste,e.tel].filter(Boolean).join(' · '),XL+8,y+40,reg,9.5,ink);
-    rtext(e.type==='mois'?'Salaire mensuel : '+DT(num(e.salaire)):'Salaire journalier : '+DT(num(e.salaire)),XR-8,y+28,reg,10.5,black);
+    rtext('Payé '+TYPE_L[e.type||'jour']+' : '+DT(num(e.salaire))+' / '+UNIT_L[e.type||'jour'],XR-8,y+28,reg,10.5,black);
     y+=62;
     // Calendrier
     text('Présence jour par jour',XL,y,bold,11,blue);y+=8;
@@ -996,7 +1020,7 @@ async function paiePdf(list,m){
     const rows=[['Jours présents',String(r.P)],['Demi-journées',String(r.D)],['Absences',String(r.A)],['Jours travaillés',String(r.jours).replace('.',',')],['Salaire dû',DT(r.du)]];
     rows.forEach(([l,v],k)=>{if(k%2===0)rect(XL,y,XR-XL,18,{color:grey});text(l,XL+8,y+12.5,reg,10.5,ink);rtext(v,XR-8,y+12.5,bold,10.5,black);y+=18});
     y+=8;
-    text('Acomptes reçus dans le mois',XL,y+10,bold,11,blue);y+=16;
+    text(P.mode==='mois'?'Acomptes reçus dans le mois':'Acomptes reçus dans la semaine',XL,y+10,bold,11,blue);y+=16;
     if(av.length)av.forEach(a=>{text(frD(a.date)+(a.note?' — '+a.note:''),XL+8,y+11,reg,10,ink);rtext('-'+DT(num(a.montant)),XR-8,y+11,reg,10,black);y+=15;page.drawLine({start:{x:XL,y:H-y},end:{x:XR,y:H-y},thickness:.5,color:rule})});
     else{text('Aucun acompte.',XL+8,y+11,reg,10,ink);y+=15}
     text('Total acomptes',XL+8,y+13,bold,10.5,ink);rtext((r.av?'-':'')+DT(r.av),XR-8,y+13,bold,10.5,black);y+=22;
@@ -1011,11 +1035,11 @@ async function paiePdf(list,m){
   }
   return doc.save();
 }
-async function sharePaie(list,m){
+async function sharePaie(list,P){if(typeof P==='string')P={mode:'mois',key:P};
   if(!list.length)return toast('Aucun salarié');
-  try{toast('Création du PDF…');const b=await paiePdf(list,m);
+  try{toast('Création du PDF…');const b=await paiePdf(list,P);
     const nm=list.length===1?String(list[0].nom).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_'):'tous';
-    const name='Salaire_'+nm+'_'+m+'.pdf';const r=await shareBlob(new Blob([b],{type:'application/pdf'}),name,name);if(r!=='abort')toast(r==='shared'?'PDF partagé':'PDF téléchargé')}
+    const name='Salaire_'+nm+'_'+(P.mode==='mois'?P.key:'semaine_'+P.key)+'.pdf';const r=await shareBlob(new Blob([b],{type:'application/pdf'}),name,name);if(r!=='abort')toast(r==='shared'?'PDF partagé':'PDF téléchargé')}
   catch(err){console.error(err);toast('Erreur PDF : '+err.message)}
 }
 
