@@ -282,8 +282,10 @@ function docTotals(d){
   const ttc=r3(base+tva+timbre);
   return {ht,remise,base,tva,timbre,ttc};
 }
+const KL={devis:'Devis',facture:'Facture',bl:'Bon de livraison'};
 const paye=d=>r3(S.paiements.filter(p=>p.docId===d.id).reduce((a,p)=>a+num(p.montant),0));
 function docEtat(d){
+  if(d.kind==='bl')return d.factureId?['Facturé','ok']:['Livré',''];
   if(d.kind==='devis'){const m={brouillon:['Brouillon','grey'],envoye:['Envoyé','amber'],accepte:['Accepté','ok'],refuse:['Refusé','warn']};if(d.factureId)return ['Facturé','ok'];return m[d.statut||'brouillon']}
   const t=docTotals(d).ttc,p=paye(d);
   if(t>0&&p>=t-0.0005)return ['Payée','ok'];if(p>0)return ['Partielle','amber'];return ['Impayée','warn'];
@@ -291,15 +293,15 @@ function docEtat(d){
 const reste=d=>r3(docTotals(d).ttc-paye(d));
 const stockOf=a=>r3(num(a.stock0)+S.mouvements.filter(m=>m.articleId===a.id).reduce((s,m)=>s+num(m.qte),0));
 function nextNum(kind,date){
-  const y=String(date||today()).slice(0,4),p=(kind==='devis'?'D':'F')+'-'+y+'-';
+  const y=String(date||today()).slice(0,4),p=({devis:'D',facture:'F',bl:'BL'}[kind])+'-'+y+'-';
   const max=S.docs.filter(d=>d.kind===kind&&String(d.num||'').startsWith(p)).reduce((m,d)=>Math.max(m,parseInt(d.num.slice(p.length))||0),0);
   return p+String(max+1).padStart(3,'0');
 }
-// Sorties de stock d'une facture : recalculées à chaque enregistrement
+// Sorties de stock : au bon de livraison, ou à la facture s'il n'y a pas eu de BL
 function applyStock(d){
   S.mouvements=S.mouvements.filter(m=>m.docId!==d.id);
-  if(d.kind!=='facture')return;
-  (d.lignes||[]).forEach(l=>{if(l.articleId&&byId('articles',l.articleId)&&num(l.qte))S.mouvements.push({id:uid(),articleId:l.articleId,date:d.date,qte:-num(l.qte),motif:'Facture '+d.num,docId:d.id})});
+  if(!(d.kind==='bl'||(d.kind==='facture'&&!d.fromBL)))return;
+  (d.lignes||[]).forEach(l=>{if(l.articleId&&byId('articles',l.articleId)&&num(l.qte))S.mouvements.push({id:uid(),articleId:l.articleId,date:d.date,qte:-num(l.qte),motif:(d.kind==='bl'?'BL ':'Facture ')+d.num,docId:d.id})});
 }
 // Journal de caisse = opérations saisies + paiements reçus + avances sur salaire
 function journal(){
@@ -494,7 +496,7 @@ function interEdit(id){
   <div class="card"><h2>Équipe sur place</h2>${emps.length?`<div class="chips" id="E" style="flex-wrap:wrap">${emps.map(e=>`<button data-e="${e.id}" class="${(i.employes||[]).includes(e.id)?'on':''}">${esc(e.nom)}</button>`).join('')}</div>`:'<p class="hint">Ajoutez vos salariés dans Plus → Équipe.</p>'}</div>
   ${isNew?'':`<div class="card"><h2>Suite</h2>
     <a class="btn${i.type==='essai'?' primary':''}" href="#/rapport/${i.id}">📄 Rapport d'essai de débit${rapFait(i)?' ✓':''}</a>
-    ${f?`<a class="btn" href="#/doc/${f.id}">🧾 Voir la facture ${esc(f.num)}</a>`:`<div class="row"><button class="grow" id="mkDevis">Faire un devis</button><button class="grow primary" id="mkFact">Facturer</button></div>`}
+    ${f?`<a class="btn" href="#/doc/${f.id}">🧾 Voir la facture ${esc(f.num)}</a>`:`<div class="row"><button class="grow" id="mkDevis">Faire un devis</button><button class="grow" id="mkBL">🚚 Bon de livraison</button><button class="grow primary" id="mkFact">Facturer</button></div>`}
   </div>`}
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
   passToggle();
@@ -506,30 +508,33 @@ function interEdit(id){
   if(!isNew){
     confirmBtn($('#del'),()=>{S.interventions=S.interventions.filter(x=>x.id!==i.id);save();go('#/interventions')});
     const mk=k=>()=>{if(store())go('#/doc-edit/new?k='+k+'&c='+i.clientId+'&i='+i.id)};
-    if($('#mkDevis'))$('#mkDevis').onclick=mk('devis');if($('#mkFact'))$('#mkFact').onclick=mk('facture');
+    if($('#mkDevis'))$('#mkDevis').onclick=mk('devis');if($('#mkBL'))$('#mkBL').onclick=mk('bl');if($('#mkFact'))$('#mkFact').onclick=mk('facture');
   }
 }
 
 /* ---------- Devis / factures ---------- */
 function docItem(d){const c=byId('clients',d.clientId),[l,cl]=docEtat(d),t=docTotals(d).ttc,r=d.kind==='facture'?reste(d):0;
-  return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(cName(d))}</b><small>${d.kind==='devis'?'Devis':'Facture'} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
+  if(d.kind==='bl')return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(cName(d))}</b><small>Bon de livraison du ${frD(d.date)} · ${d.lignes.length} ligne(s)</small></div><div class="r"><span class="tag ${cl}">${l}</span></div></a>`;
+  return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(cName(d))}</b><small>${KL[d.kind]} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
 let docFilter='factures';
 const WIDE=()=>matchMedia('(min-width:1000px)').matches;
 function tblClick(root){root.querySelectorAll('tr[data-h]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('a,button'))return;location.hash=tr.dataset.h})}
 function docTable(L){
   return `<table class="tbl"><thead><tr><th>N°</th><th>Date</th><th>Client</th><th class="n">Total TTC</th><th class="n">Payé</th><th class="n">Reste</th><th>État</th></tr></thead><tbody>${L.map(d=>{const t=docTotals(d).ttc,[l,cl]=docEtat(d),isF=d.kind==='facture',p=isF?paye(d):0,r=isF?reste(d):0;
     return `<tr class="go" data-h="#/doc/${d.id}"><td><b>${esc(d.num)}</b></td><td>${frD(d.date)}</td><td>${esc(cName(d))}</td><td class="n"><b>${dt(t)}</b></td><td class="n">${isF?dt(p):''}</td><td class="n" style="color:${r>0.0005?'var(--warn)':'inherit'}">${isF?dt(r):''}</td><td><span class="tag ${cl}">${l}</span></td></tr>`}).join('')}</tbody></table>`}
+function blTable(L){return `<table class="tbl"><thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Articles livrés</th><th>État</th></tr></thead><tbody>${L.map(d=>{const [l,cl]=docEtat(d),f=d.factureId&&byId('docs',d.factureId);
+  return `<tr class="go" data-h="#/doc/${d.id}"><td><b>${esc(d.num)}</b></td><td>${frD(d.date)}</td><td>${esc(cName(d))}</td><td>${esc(d.lignes.map(x=>String(x.qte).replace('.',',')+' × '+x.des).join(' · ').slice(0,90))}</td><td>${f?`<a class="tag ok" href="#/doc/${f.id}">${esc(f.num)}</a>`:`<span class="tag ${cl}">${l}</span>`}</td></tr>`}).join('')}</tbody></table>`}
 function docs(){
   tab('docs');
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');if(qs.get('f'))docFilter=qs.get('f');
   setHead('Devis & factures',{act:'<button class="small" onclick="location.hash=\'#/doc-edit/new?k=facture\'">+ Facture</button>'});
-  const F=[['factures','Factures'],['impayees','Impayées'],['devis','Devis']];
-  V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${docFilter===k?'on':''}">${l}</button>`).join('')}<button onclick="location.hash='#/doc-edit/new?k=devis'">+ Devis</button></div><input id="q" type="search" placeholder="Numéro, client…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>`;
+  const F=[['factures','Factures'],['impayees','Impayées'],['devis','Devis'],['bl','Bons de livraison']];
+  V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${docFilter===k?'on':''}">${l}</button>`).join('')}<button onclick="location.hash='#/doc-edit/new?k=devis'">+ Devis</button><button onclick="location.hash='#/doc-edit/new?k=bl'">+ BL</button></div><input id="q" type="search" placeholder="Numéro, client…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();
-    let L=S.docs.filter(d=>docFilter==='devis'?d.kind==='devis':d.kind==='facture'&&(docFilter!=='impayees'||reste(d)>0.0005));
+    let L=S.docs.filter(d=>docFilter==='devis'||docFilter==='bl'?d.kind===docFilter:d.kind==='facture'&&(docFilter!=='impayees'||reste(d)>0.0005));
     L=L.filter(d=>{return (d.num+' '+cName(d)).toLowerCase().includes(q)}).sort((a,b)=>b.date.localeCompare(a.date)||b.num.localeCompare(a.num));
-    $('#L').innerHTML=L.length?(WIDE()?docTable(L):L.map(docItem).join('')):'<div class="empty">Aucun document.</div>';tblClick($('#L'));
-    $('#T').textContent=L.length?L.length+' document(s) · total '+DT(L.reduce((a,d)=>a+(docFilter==='impayees'?reste(d):docTotals(d).ttc),0)):''};
+    $('#L').innerHTML=L.length?(WIDE()?(docFilter==='bl'?blTable(L):docTable(L)):L.map(docItem).join('')):'<div class="empty">Aucun document.</div>';tblClick($('#L'));
+    $('#T').textContent=docFilter==='bl'?(L.length?L.length+' bon(s) de livraison':''):L.length?L.length+' document(s) · total '+DT(L.reduce((a,d)=>a+(docFilter==='impayees'?reste(d):docTotals(d).ttc),0)):''};
   V.querySelectorAll('.chips button[data-f]').forEach(b=>b.onclick=()=>{docFilter=b.dataset.f;history.replaceState(null,'','#/docs');docs()});
   $('#q').oninput=draw;draw();
 }
@@ -538,7 +543,7 @@ function docEdit(id){
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');
   const isNew=id==='new';
   let d;
-  if(isNew){const k=qs.get('k')==='devis'?'devis':'facture';
+  if(isNew){const k=['devis','bl'].includes(qs.get('k'))?qs.get('k'):'facture';
     d={id:uid(),kind:k,date:today(),clientId:qs.get('c')||'passager',interventionId:qs.get('i')||'',lignes:[{des:'',qte:'1',pu:''}],tva:S.settings.tva,timbre:k==='facture'?S.settings.timbre:0,remise:'',statut:'brouillon',notes:'',validite:'30'};
     const inter=d.interventionId&&byId('interventions',d.interventionId);
     if(inter){d.nomLibre=inter.nomLibre||'';d.telLibre=inter.telLibre||''}
@@ -546,15 +551,16 @@ function docEdit(id){
   }else{d=JSON.parse(JSON.stringify(byId('docs',id)||{}));if(!d.id)return go('#/docs')}
   const nc=sessionStorage.getItem('newClient');if(nc){d.clientId=nc;sessionStorage.removeItem('newClient')}
   const dr=sessionStorage.getItem('docDraft');if(dr&&isNew){const o=JSON.parse(dr);Object.assign(d,o,{id:d.id,clientId:d.clientId||o.clientId});sessionStorage.removeItem('docDraft')}
-  const isF=d.kind==='facture';
-  setHead((isNew?'Nouvelle ':'')+(isF?'facture':'devis')+(d.num?' '+d.num:''),{back:'#/docs'});
-  const HEAD=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'nomLibre',l:'Nom du client passager (facultatif)'},{k:'telLibre',l:'Téléphone (facultatif)',t:'tel'},{k:'date',l:'Date',t:'date'},isF?{k:'echeance',l:'Échéance (facultatif)',t:'date'}:{k:'validite',l:'Validité (jours)',t:'number'}];
+  const isF=d.kind==='facture',isBL=d.kind==='bl';
+  setHead(isNew?({facture:'Nouvelle facture',devis:'Nouveau devis',bl:'Nouveau bon de livraison'}[d.kind]):KL[d.kind]+' '+(d.num||''),{back:'#/docs'});
+  const HEAD=[{k:'clientId',l:'Client',t:'select',o:clientOpts(),full:1},{k:'nomLibre',l:'Nom du client passager (facultatif)'},{k:'telLibre',l:'Téléphone (facultatif)',t:'tel'},{k:'date',l:isBL?'Date de livraison':'Date',t:'date'},isBL?{k:'livraison',l:'Adresse / lieu de livraison'}:isF?{k:'echeance',l:'Échéance (facultatif)',t:'date'}:{k:'validite',l:'Validité (jours)',t:'number'}];
+  if(isBL)HEAD.push({k:'livreur',l:'Livré par'});
   V.innerHTML=`<datalist id="arts">${S.articles.map(a=>`<option value="${esc(a.des)}">`).join('')}</datalist>
   <div class="card">${fields(HEAD,d)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
-  <div class="card"><h2>Lignes <span class="hint" style="text-transform:none;letter-spacing:0">prix HT en DT</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
-  <div class="card"><div class="grid"><label>Remise (%)<input id="remise" inputmode="decimal" value="${esc(d.remise)}"></label><label>TVA (%)<input id="tva" inputmode="decimal" value="${esc(d.tva)}"></label>${isF?`<label>Timbre fiscal (DT)<input id="timbre" inputmode="decimal" value="${esc(d.timbre)}"></label>`:''}</div>
+  <div class="card"><h2>${isBL?'Articles livrés':'Lignes'} <span class="hint" style="text-transform:none;letter-spacing:0">${isBL?'quantités':'prix HT en DT'}</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
+  <div class="card"${isBL?' hidden':''}><div class="grid"><label>Remise (%)<input id="remise" inputmode="decimal" value="${esc(d.remise)}"></label><label>TVA (%)<input id="tva" inputmode="decimal" value="${esc(d.tva)}"></label>${isF?`<label>Timbre fiscal (DT)<input id="timbre" inputmode="decimal" value="${esc(d.timbre)}"></label>`:''}</div>
   <div class="totals" id="TOT"></div></div>
-  <div class="card"><label>Notes (apparaissent sur le PDF)<textarea id="notes" placeholder="Conditions, garantie, délai…">${esc(d.notes||'')}</textarea></label></div>
+  <div class="card"><label>Notes (apparaissent sur le PDF)<textarea id="notes" placeholder="${isBL?'Observations, état du matériel…':'Conditions, garantie, délai…'}">${esc(d.notes||'')}</textarea></label></div>
   <div class="row"><button class="primary grow" id="ok">Enregistrer</button>${isNew?'':'<button class="danger" id="del">Supprimer</button>'}</div>`;
   passToggle();
   const LN=$('#LN');
@@ -562,10 +568,10 @@ function docEdit(id){
     LN.innerHTML=d.lignes.map((l,k)=>`<div class="line" data-k="${k}">
       <label class="des">Désignation<input data-f="des" list="arts" value="${esc(l.des)}" autocomplete="off"></label>
       <label>Qté<input data-f="qte" inputmode="decimal" value="${esc(l.qte)}"></label>
-      <label>P.U. HT<input data-f="pu" inputmode="decimal" value="${esc(l.pu)}"></label>
-      <label>Total HT<span class="ltot" data-tot>${dt(num(l.qte)*num(l.pu))}</span></label>
+      <label${isBL?' hidden':''}>P.U. HT<input data-f="pu" inputmode="decimal" value="${esc(l.pu)}"></label>
+      <label${isBL?' hidden':''}>Total HT<span class="ltot" data-tot>${dt(num(l.qte)*num(l.pu))}</span></label>
       <button class="ghost danger small" data-del aria-label="Supprimer la ligne">✕</button>
-      <p class="hint" data-art style="grid-column:1/-1"${l.articleId?'':' hidden'}>📦 Article du stock${isF?' — sortie de stock à l’enregistrement':''}</p></div>`).join('');
+      <p class="hint" data-art style="grid-column:1/-1"${l.articleId?'':' hidden'}>📦 Article du stock${isBL||(isF&&!d.fromBL)?' — sortie de stock à l’enregistrement':''}</p></div>`).join('');
     LN.querySelectorAll('.line').forEach(row=>{const k=+row.dataset.k;
       row.querySelectorAll('input[data-f]').forEach(inp=>inp.oninput=()=>{const l=d.lignes[k];l[inp.dataset.f]=inp.value;
         if(inp.dataset.f==='des'){const a=S.articles.find(a=>a.des===inp.value);if(a){l.articleId=a.id;if(!l.pu){l.pu=String(a.pv||'');row.querySelector('[data-f=pu]').value=l.pu}}else delete l.articleId;row.querySelector('[data-art]').hidden=!l.articleId}
@@ -581,42 +587,54 @@ function docEdit(id){
   drawLines();tot();
   $('#ok').onclick=()=>{readTop();if(!d.clientId)return toast('Choisissez un client');
     d.lignes=d.lignes.filter(l=>String(l.des).trim()||num(l.pu));if(!d.lignes.length)return toast('Ajoutez au moins une ligne');
+    if(isBL&&d.fromDevis){const dv=byId('docs',d.fromDevis);if(dv){dv.blId=d.id;dv.statut='accepte'}}
     if(!d.num)d.num=nextNum(d.kind,d.date);
     const k=S.docs.findIndex(x=>x.id===d.id);if(k<0)S.docs.push(d);else S.docs[k]=d;
     if(isF&&d.interventionId){const it=byId('interventions',d.interventionId);if(it){it.factureId=d.id;if(it.statut!=='annule')it.statut='termine'}}
     if(isF&&d.fromDevis){const dv=byId('docs',d.fromDevis);if(dv){dv.factureId=d.id;dv.statut='accepte'}}
-    applyStock(d);save();toast((isF?'Facture ':'Devis ')+d.num+' enregistré'+(isF?'e':''));location.replace('#/doc/'+d.id)};
+    applyStock(d);save();toast(KL[d.kind]+' '+d.num+' enregistré'+(isF?'e':''));location.replace('#/doc/'+d.id)};
   if(!isNew)confirmBtn($('#del'),()=>{
     if(isF&&S.paiements.some(p=>p.docId===d.id))return toast('Supprimez d’abord les paiements de cette facture');
     S.docs=S.docs.filter(x=>x.id!==d.id);S.mouvements=S.mouvements.filter(m=>m.docId!==d.id);
-    S.interventions.forEach(i=>{if(i.factureId===d.id)delete i.factureId});S.docs.forEach(x=>{if(x.factureId===d.id)delete x.factureId});
+    S.interventions.forEach(i=>{if(i.factureId===d.id)delete i.factureId});S.docs.forEach(x=>{if(x.factureId===d.id)delete x.factureId;if(x.blId===d.id)delete x.blId;if(x.fromBL===d.id){delete x.fromBL;applyStock(x)}});
     save();go('#/docs')});
 }
 function docView(id){
   tab('docs');const d=byId('docs',id);if(!d)return go('#/docs');
-  const c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture',[el,ec]=docEtat(d);
-  setHead((isF?'Facture ':'Devis ')+d.num,{back:'#/docs',act:`<button class="small" onclick="location.hash='#/doc-edit/${id}'">Modifier</button>`});
+  const c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture',isBL=d.kind==='bl',[el,ec]=docEtat(d);
+  setHead((isBL?'BL ':KL[d.kind]+' ')+d.num,{back:'#/docs',act:`<button class="small" onclick="location.hash='#/doc-edit/${id}'">Modifier</button>`});
   const pays=S.paiements.filter(p=>p.docId===id).sort((a,b)=>a.date.localeCompare(b.date));
-  const dv=d.fromDevis&&byId('docs',d.fromDevis),fa=d.factureId&&byId('docs',d.factureId);
+  const dv=d.fromDevis&&byId('docs',d.fromDevis),fa=d.factureId&&byId('docs',d.factureId),bl=(d.fromBL&&byId('docs',d.fromBL))||(d.blId&&byId('docs',d.blId));
   V.innerHTML=`<div class="card">
     <div class="row"><b class="grow">${esc(cName(d))}</b><span class="tag ${ec}">${el}</span></div>
-    <p class="hint">${frD(d.date)}${(d.clientId==='passager'?d.telLibre:c.tel)?' · '+esc(d.clientId==='passager'?d.telLibre:c.tel):''}${dv?` · issue du devis <a href="#/doc/${dv.id}">${esc(dv.num)}</a>`:''}${fa?` · facturé : <a href="#/doc/${fa.id}">${esc(fa.num)}</a>`:''}</p>
-    <div class="list">${d.lignes.map(l=>`<div class="item" style="min-height:0"><div class="t"><b style="white-space:normal">${esc(l.des)}</b><small>${esc(l.qte)} × ${dt(num(l.pu))}</small></div><div class="r money">${dt(num(l.qte)*num(l.pu))}</div></div>`).join('')}</div>
-    <div class="totals"><span>Total HT</span><b>${DT(t.ht)}</b>${t.remise?`<span>Remise</span><b>−${DT(t.remise)}</b>`:''}<span>TVA ${esc(d.tva)} %</span><b>${DT(t.tva)}</b>${isF?`<span>Timbre</span><b>${DT(t.timbre)}</b>`:''}<span class="big">Total TTC</span><span class="big">${DT(t.ttc)}</span>
+    <p class="hint">${frD(d.date)}${(d.clientId==='passager'?d.telLibre:c.tel)?' · '+esc(d.clientId==='passager'?d.telLibre:c.tel):''}${dv?` · issue du devis <a href="#/doc/${dv.id}">${esc(dv.num)}</a>`:''}${fa?` · facturé : <a href="#/doc/${fa.id}">${esc(fa.num)}</a>`:''}${bl?` · bon de livraison <a href="#/doc/${bl.id}">${esc(bl.num)}</a>`:''}${isBL&&d.livraison?'<br>Livraison : '+esc(d.livraison):''}</p>
+    <div class="list">${d.lignes.map(l=>isBL?`<div class="item" style="min-height:0"><div class="t"><b style="white-space:normal">${esc(l.des)}</b></div><div class="r">${esc(String(l.qte).replace('.',','))}<small>${l.articleId?esc((byId('articles',l.articleId)||{}).unite||''):''}</small></div></div>`:`<div class="item" style="min-height:0"><div class="t"><b style="white-space:normal">${esc(l.des)}</b><small>${esc(l.qte)} × ${dt(num(l.pu))}</small></div><div class="r money">${dt(num(l.qte)*num(l.pu))}</div></div>`).join('')}</div>
+    <div class="totals"${isBL?' hidden':''}><span>Total HT</span><b>${DT(t.ht)}</b>${t.remise?`<span>Remise</span><b>−${DT(t.remise)}</b>`:''}<span>TVA ${esc(d.tva)} %</span><b>${DT(t.tva)}</b>${isF?`<span>Timbre</span><b>${DT(t.timbre)}</b>`:''}<span class="big">Total TTC</span><span class="big">${DT(t.ttc)}</span>
     ${isF?`<span>Payé</span><b style="color:var(--ok)">${DT(paye(d))}</b><span>Reste dû</span><b style="color:${reste(d)>0.0005?'var(--warn)':'var(--ok)'}">${DT(reste(d))}</b>`:''}</div>
   </div>
   <div class="row"><button class="primary grow" id="pdf">📤 Envoyer le PDF</button><button class="grow" id="see">👁 Aperçu</button></div>
   ${isF?`<div class="card"><h2>Paiements</h2><div class="list">${pays.map(p=>`<div class="item"><div class="t"><b>${DT(num(p.montant))}</b><small>${frD(p.date)} · ${esc(p.mode||'')}${p.note?' · '+esc(p.note):''}</small></div><button class="ghost danger small" data-dp="${p.id}">Supprimer</button></div>`).join('')||'<div class="empty">Aucun paiement.</div>'}</div>
     ${reste(d)>0.0005?`<div class="grid"><label>Montant<input id="pm" inputmode="decimal" value="${dt(reste(d)).replace(/\s/g,'')}"></label><label>Date<input id="pd" type="date" value="${today()}"></label><label>Mode<select id="pmode"><option>Espèces</option><option>Chèque</option><option>Virement</option><option>Traite</option></select></label><label>Note<input id="pn" placeholder="N° chèque…"></label></div><button id="addP">+ Enregistrer le paiement</button>`:''}</div>`
+  :isBL?`<div class="card"><h2>Suite</h2>${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button><p class="hint">Les prix sont repris du devis ou du stock ; vous pourrez les corriger. Le stock ne sera pas décompté une deuxième fois.</p>'}<button id="dup">Dupliquer ce bon</button></div>`
   :`<div class="card"><h2>Suivi du devis</h2><div class="row">${[['brouillon','Brouillon'],['envoye','Envoyé'],['accepte','Accepté'],['refuse','Refusé']].map(([k,l])=>`<button class="small${(d.statut||'brouillon')===k?' primary':''}" data-st="${k}">${l}</button>`).join('')}</div>
-    ${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button>'}<button id="dup">Dupliquer ce devis</button></div>`}
+    ${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button>'}${d.blId?'':'<button id="toBL">🚚 Faire le bon de livraison</button>'}<button id="dup">Dupliquer ce devis</button></div>`}
   <div id="prev" style="display:flex;flex-direction:column;gap:10px"></div>`;
   $('#pdf').onclick=()=>sharePdf(d);
   $('#see').onclick=async()=>{const b=await docPdf(d);const u=URL.createObjectURL(new Blob([b],{type:'application/pdf'}));window.open(u,'_blank')||(location.href=u)};
   if(isF){
     V.querySelectorAll('[data-dp]').forEach(b=>confirmBtn(b,()=>{S.paiements=S.paiements.filter(p=>p.id!==b.dataset.dp);save();docView(id)}));
     if($('#addP'))$('#addP').onclick=()=>{const m=num($('#pm').value);if(m<=0)return toast('Montant invalide');S.paiements.push({id:uid(),docId:id,date:$('#pd').value||today(),montant:m,mode:$('#pmode').value,note:$('#pn').value.trim()});save();toast('Paiement enregistré');docView(id)};
+  }else if(isBL){
+    if($('#toF'))$('#toF').onclick=()=>{const src=d.fromDevis&&byId('docs',d.fromDevis);
+      const lignes=d.lignes.map(l=>{const m=src&&src.lignes.find(x=>x.des===l.des);const a=l.articleId&&byId('articles',l.articleId);return Object.assign({},l,{pu:l.pu||(m&&m.pu)||(a&&a.pv)||''})});
+      const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes,tva:src?src.tva:S.settings.tva,timbre:S.settings.timbre,remise:src?src.remise:'',notes:'',fromBL:d.id,fromDevis:d.fromDevis||''};
+      f.num=nextNum('facture',f.date);S.docs.push(f);d.factureId=f.id;if(src&&!src.factureId)src.factureId=f.id;
+      if(f.interventionId){const it=byId('interventions',f.interventionId);if(it){it.factureId=f.id;it.statut='termine'}}
+      applyStock(f);save();toast('Facture '+f.num+' créée — vérifiez les prix');go('#/doc-edit/'+f.id)};
+    $('#dup').onclick=()=>{const n=JSON.parse(JSON.stringify(d));n.id=uid();n.date=today();n.num=nextNum('bl',n.date);delete n.factureId;delete n.fromDevis;S.docs.push(n);applyStock(n);save();toast('Bon '+n.num+' créé');go('#/doc-edit/'+n.id)};
   }else{
+    if($('#toBL'))$('#toBL').onclick=()=>{const b={id:uid(),kind:'bl',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:0,remise:d.remise,notes:'',fromDevis:d.id,livraison:''};
+      b.num=nextNum('bl',b.date);S.docs.push(b);d.blId=b.id;d.statut='accepte';applyStock(b);save();toast('Bon de livraison '+b.num+' créé');go('#/doc-edit/'+b.id)};
     V.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{d.statut=b.dataset.st;save();docView(id)});
     if($('#toF'))$('#toF').onclick=()=>{const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:S.settings.timbre,remise:d.remise,notes:d.notes,fromDevis:d.id};
       f.num=nextNum('facture',f.date);S.docs.push(f);d.factureId=f.id;d.statut='accepte';
@@ -633,9 +651,9 @@ const safe=s=>String(s??'').replace(/[‘’]/g,"’").replace(/[−–—]/g,'-
 async function docPdf(d){
   const {PDFDocument,StandardFonts,rgb}=PDFLib;
   if(!ASSETS)ASSETS={tpl:b64(SOGEI_ASSETS.MODELE_B64),cachet:b64(SOGEI_ASSETS.CACHET_B64)};
-  const st=S.settings,c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture';
+  const st=S.settings,c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture',isBL=d.kind==='bl';
   const doc=await PDFDocument.create();
-  doc.setTitle((isF?'Facture ':'Devis ')+d.num);doc.setAuthor('SOGEI');
+  doc.setTitle(KL[d.kind]+' '+d.num);doc.setAuthor('SOGEI');
   const [bg]=await doc.embedPdf(ASSETS.tpl.slice(0),[0]);const H=bg.height,W=bg.width;
   const reg=await doc.embedFont(StandardFonts.Helvetica),bold=await doc.embedFont(StandardFonts.HelveticaBold);
   const ink=rgb(.133,.133,.133),black=rgb(0,0,0),blue=rgb(0x2f/255,0x54/255,0x96/255),white=rgb(1,1,1),grey=rgb(.955,.96,.97),rule=rgb(.82,.84,.88),light=rgb(.92,.945,.985);
@@ -648,11 +666,13 @@ async function docPdf(d){
   const wrap=(s,f,sz,max)=>{const out=[];String(s||'').split(/\n/).forEach(par=>{let line='';safe(par).split(/\s+/).filter(Boolean).forEach(w=>{const tt=line?line+' '+w:w;if(f.widthOfTextAtSize(tt,sz)>max&&line){out.push(line);line=w}else line=tt});out.push(line)});return out};
   newPage();
   // Titre
-  const title=(isF?'FACTURE':'DEVIS')+' N° '+d.num;
+  const title=({facture:'FACTURE',devis:'DEVIS',bl:'BON DE LIVRAISON'}[d.kind])+' N° '+d.num;
   const tw=bold.widthOfTextAtSize(safe(title),20);text(title,(XL+XR)/2-tw/2,150,bold,20,black);
   y=172;
   // Bloc société (gauche) / client (droite)
-  const leftL=[st.mf?'MF : '+st.mf:'',st.rc?'RC : '+st.rc:'','Date : '+frD(d.date),isF&&d.echeance?'Échéance : '+frD(d.echeance):'',!isF&&d.validite?'Validité : '+d.validite+' jours':''].filter(Boolean);
+  const lieuL=isBL&&d.livraison?wrap('Livraison : '+d.livraison,reg,10.5,220):[];
+  const fa=isBL&&d.factureId&&byId('docs',d.factureId),dvs=isBL&&d.fromDevis&&byId('docs',d.fromDevis);
+  const leftL=[st.mf?'MF : '+st.mf:'',st.rc?'RC : '+st.rc:'',(isBL?'Date de livraison : ':'Date : ')+frD(d.date),...lieuL,isBL&&dvs?'Réf. devis : '+dvs.num:'',isBL&&fa?'Facture : '+fa.num:'',isBL&&d.livreur?'Livré par : '+d.livreur:'',isF&&d.echeance?'Échéance : '+frD(d.echeance):'',d.kind==='devis'&&d.validite?'Validité : '+d.validite+' jours':''].filter(Boolean);
   const isP=d.clientId==='passager';const cl=(isP?[d.nomLibre||'Client passager',d.telLibre?'Tél : '+d.telLibre:'']:[c.nom||'',c.adresse||'',c.tel?'Tél : '+c.tel:'',c.mf?'MF : '+c.mf:'']).filter(Boolean);
   const bx=330,bw=XR-bx,bh=18+cl.length*14;
   rect(bx,y,bw,bh,{borderColor:blue,borderWidth:.9});
@@ -662,19 +682,35 @@ async function docPdf(d){
   y+=Math.max(bh,leftL.length*15)+18;
   // Tableau des lignes
   const cQ=380,cPU=460,cT=XR-6,RH=20;
-  const headRow=()=>{rect(XL,y,XR-XL,20,{color:blue});text('Désignation',XL+6,y+14,bold,10,white);rtext('Qté',cQ+18,y+14,bold,10,white);rtext('P.U. HT',cPU+20,y+14,bold,10,white);rtext('Total HT',cT,y+14,bold,10,white);y+=20};
+  const headRow=()=>{rect(XL,y,XR-XL,20,{color:blue});text('Désignation',XL+6,y+14,bold,10,white);
+    if(isBL){rtext('Quantité',cPU-10,y+14,bold,10,white);rtext('Unité',cT,y+14,bold,10,white)}else{rtext('Qté',cQ+18,y+14,bold,10,white);rtext('P.U. HT',cPU+20,y+14,bold,10,white);rtext('Total HT',cT,y+14,bold,10,white)}y+=20};
   headRow();
   d.lignes.forEach((l,k)=>{
-    const ls=wrap(l.des,reg,10,cQ-XL-30),h=Math.max(RH,8+ls.length*12);
+    const ls=wrap(l.des,reg,10,(isBL?cPU-80:cQ)-XL-30),h=Math.max(RH,8+ls.length*12);
     if(y+h>BOTTOM){newPage();headRow()}
     if(k%2===1)rect(XL,y,XR-XL,h,{color:grey});
     ls.forEach((s,j)=>text(s,XL+6,y+14+j*12,reg,10,ink));
-    rtext(String(l.qte).replace('.',','),cQ+18,y+14,reg,10,ink);
+    if(isBL){rtext(String(l.qte).replace('.',','),cPU-10,y+14,bold,10.5,black);const a=l.articleId&&byId('articles',l.articleId);rtext(a?({u:'pièce',m:'mètre'}[a.unite]||a.unite||''):'',cT,y+14,reg,10,ink)}
+    else{rtext(String(l.qte).replace('.',','),cQ+18,y+14,reg,10,ink);
     rtext(dt(num(l.pu)),cPU+20,y+14,reg,10,ink);
-    rtext(dt(num(l.qte)*num(l.pu)),cT,y+14,bold,10,black);
+    rtext(dt(num(l.qte)*num(l.pu)),cT,y+14,bold,10,black)}
     y+=h;page.drawLine({start:{x:XL,y:H-y},end:{x:XR,y:H-y},thickness:.6,color:rule});
   });
   y+=10;
+  if(isBL){
+    text(d.lignes.length+' ligne(s) livrée(s).',XL,y+4,reg,10,ink);y+=18;
+    if(d.notes){wrap('Observations : '+d.notes,reg,10,XR-XL).forEach(s=>{if(y>BOTTOM)newPage();text(s,XL,y,reg,10,ink);y+=13})}
+    if(y+150>760)newPage();
+    const by=y+14;
+    text('Reçu par le client',XL+8,by,bold,10.5,black);
+    rect(XL,by+6,210,104,{borderColor:rule,borderWidth:.8});
+    text('Nom :',XL+8,by+26,reg,9.5,ink);text('Date :',XL+8,by+46,reg,9.5,ink);text('Signature :',XL+8,by+66,reg,9.5,ink);
+    let sy2=by;const SX2=448;
+    ["Sté Générale d'Équipement","Hydraulique et Électrique",st.signataire,st.fonction].forEach(s=>{if(!s)return;const w=bold.widthOfTextAtSize(safe(s),10.5);text(s,SX2-w/2,sy2,bold,10.5,black);sy2+=13});
+    if(st.cachet!==false){const img=await doc.embedJpg(ASSETS.cachet.slice(0));const w=72,h=w*img.height/img.width;page.drawImage(img,{x:SX2-w/2,y:H-(sy2+h),width:w,height:h})}
+    const pg2=doc.getPages();if(pg2.length>1)pg2.forEach((p,k)=>p.drawText((k+1)+' / '+pg2.length,{x:XR-20,y:H-775,size:8,font:reg,color:ink}));
+    return doc.save();
+  }
   // Totaux
   const TL=[['Total HT',t.ht]];
   if(t.remise)TL.push(['Remise '+String(d.remise).replace('.',',')+' %',-t.remise],['Net HT',t.base]);
@@ -701,7 +737,7 @@ async function docPdf(d){
   const pages=doc.getPages();if(pages.length>1)pages.forEach((p,k)=>p.drawText((k+1)+' / '+pages.length,{x:XR-20,y:H-775,size:8,font:reg,color:ink}));
   return doc.save();
 }
-function pdfName(d){const c=byId('clients',d.clientId)||{};const n=String(d.clientId==='passager'?(d.nomLibre||'passager'):(c.nom||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');return (d.kind==='facture'?'Facture_':'Devis_')+d.num+(n?'_'+n:'')+'.pdf'}
+function pdfName(d){const c=byId('clients',d.clientId)||{};const n=String(d.clientId==='passager'?(d.nomLibre||'passager'):(c.nom||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_|_$/g,'');return ({facture:'Facture_',devis:'Devis_',bl:'BL_'}[d.kind])+d.num+(n?'_'+n:'')+'.pdf'}
 async function shareBlob(blob,name,title){
   let file=null;try{file=new File([blob],name,{type:blob.type})}catch(e){}
   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title});return 'shared'}catch(e){if(e&&e.name==='AbortError')return 'abort'}}
