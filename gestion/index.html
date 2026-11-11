@@ -169,7 +169,7 @@ table.tbl td b{font-weight:600}
   <nav>
     <a href="#/" data-s="^#/?$"><span>🏠</span>Accueil</a>
     <a href="#/clients" data-s="^#/client"><span>👥</span>Clients</a>
-    <a href="#/interventions" data-s="^#/(interventions|inter/|rapport/(?!libre))"><span>🔧</span>Chantiers</a>
+    <a href="#/interventions" data-s="^#/(interventions|inter/)"><span>🔧</span>Chantiers</a>
     <a href="#/docs" data-s="^#/doc"><span>🧾</span>Devis & factures</a>
     <hr>
     <a href="#/stock" data-s="^#/(stock|article)"><span>📦</span>Stock</a>
@@ -178,7 +178,7 @@ table.tbl td b{font-weight:600}
     <a class="money-only" href="#/paie" data-s="^#/paie"><span>💰</span>Salaires</a>
     <a class="money-only" href="#/caisse" data-s="^#/caisse"><span>💵</span>Caisse</a>
     <a class="money-only" href="#/bilan" data-s="^#/bilan"><span>📊</span>Bilan 12 mois</a>
-    <a href="#/rapport/libre" data-s="^#/rapport/libre"><span>📄</span>Rapport d'essai</a>
+    <a href="#/rapports" data-s="^#/rapport"><span>📄</span>Rapports d'essai</a>
     <hr>
     <a href="#/params" data-s="^#/params"><span>⚙️</span>Paramètres</a>
   </nav>
@@ -353,7 +353,7 @@ const routes=[
   [/^#\/plus$/,plus],
   [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
   [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],[/^#\/paie\/([\w-]+)$/,paieEmp],
-  [/^#\/caisse$/,caisse],[/^#\/bilan$/,bilan],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
+  [/^#\/caisse$/,caisse],[/^#\/rapports$/,rapportsList],[/^#\/bilan$/,bilan],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
 ];
 function route(){
   if(typeof gate==='function'&&CLOUD&&!gate())return;
@@ -723,7 +723,7 @@ function rapCapture(){
   const ctx=S.rapportCtx;if(!ctx)return;
   let r=null;try{r=JSON.parse(localStorage.getItem(RKEY))}catch(e){}
   if(!r)return;
-  if(ctx==='libre')S.rapportLibre=r;else{const i=byId('interventions',ctx);if(i)i.rapport=r}
+  if(ctx==='libre')S.rapportLibre=r;else{const i=byId('interventions',ctx);if(i){i.rapport=r;if(rapFait(i)&&!i.rapportNum)i.rapportNum=nextRapNum(r.date||i.date)}}
   save();
 }
 // En quittant un rapport : on l'enregistre, puis on remet le rapport libre en place
@@ -737,7 +737,7 @@ function rapport(id){
   const inter=id==='libre'?null:byId('interventions',id);
   if(id!=='libre'&&!inter)return go('#/interventions');
   tab(inter?'interventions':'plus');
-  setHead(inter?'Rapport — '+cName(inter):"Rapport d'essai",{back:inter?'#/inter/'+id:'#/plus'});
+  setHead(inter?(inter.rapportNum?inter.rapportNum+' — ':'Rapport — ')+((inter.rapport&&inter.rapport.client)||cName(inter)):"Rapport d'essai",{back:'#/rapports',act:inter?`<a class="btn small" href="#/inter/${id}" style="background:rgba(255,255,255,.16);border:0;color:#fff">Chantier</a>`:''});
   if(DEMO&&localStorage.getItem(RKEY+'-real')===null)localStorage.setItem(RKEY+'-real',localStorage.getItem(RKEY)||'');
   rapCapture();
   let data;
@@ -757,6 +757,33 @@ function rapport(id){
 addEventListener('pagehide',rapCapture);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)rapCapture()});
 
+/* ---------- Liste des rapports d'essai ---------- */
+function nextRapNum(date){const y=String(date||today()).slice(0,4),p='R-'+y+'-';
+  const max=S.interventions.reduce((m,i)=>i.rapportNum&&i.rapportNum.startsWith(p)?Math.max(m,parseInt(i.rapportNum.slice(p.length))||0):m,0);return p+String(max+1).padStart(3,'0')}
+function numeroterRapports(){
+  let ch=false;S.interventions.filter(i=>rapFait(i)&&!i.rapportNum).sort((a,b)=>((a.rapport.date||a.date||'')).localeCompare(b.rapport.date||b.date||'')).forEach(i=>{i.rapportNum=nextRapNum(i.rapport.date||i.date);ch=true});
+  if(ch&&!(CLOUD&&monRole==='lecture'))save();
+}
+function rapInfo(i){const r=i.rapport||{},F=r.forages||[];
+  const nom=r.client||cName(i),lieu=r.adresse||i.lieu||'';
+  const q=F.map(f=>f.debitPropose||f.debitTest).filter(Boolean).map(x=>String(x).replace('.',',')+' l/s');
+  return {num:i.rapportNum||'',date:r.date||i.date||'',nom,lieu,nb:F.length,deb:q.join(' / '),prof:F.map(f=>f.profondeur).filter(Boolean).map(x=>x+' m').join(' / ')}}
+function rapportsList(){
+  tab('plus');setHead("Rapports d'essai",{act:'<button class="small" id="newRap">+ Nouveau</button>'});
+  numeroterRapports();
+  V.innerHTML=`<input id="q" type="search" placeholder="Numéro, client, lieu…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>
+  <p class="hint">Chaque rapport est rattaché à un chantier. « + Nouveau » crée un chantier « Essai de débit » et ouvre son rapport. Pour envoyer le PDF : ouvrez le rapport puis « Envoyer le PDF ».</p>`;
+  const draw=()=>{const q=$('#q').value.toLowerCase();
+    const L=S.interventions.filter(rapFait).map(i=>[i,rapInfo(i)]).filter(([i,x])=>(x.num+' '+x.nom+' '+x.lieu).toLowerCase().includes(q)).sort((a,b)=>b[1].date.localeCompare(a[1].date)||b[1].num.localeCompare(a[1].num));
+    if(!L.length){$('#L').innerHTML='<div class="empty">Aucun rapport. Touchez « + Nouveau ».</div>';$('#T').textContent='';return}
+    $('#L').innerHTML=WIDE()?`<table class="tbl"><thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Lieu</th><th class="n">Forages</th><th class="n">Profondeur</th><th class="n">Débit</th><th></th></tr></thead><tbody>${L.map(([i,x])=>`<tr class="go" data-h="#/rapport/${i.id}"><td><b>${esc(x.num)}</b></td><td>${frD(x.date)}</td><td>${esc(x.nom)}</td><td>${esc(x.lieu)}</td><td class="n">${x.nb}</td><td class="n">${esc(x.prof)}</td><td class="n">${esc(x.deb)}</td><td><a class="tag" href="#/inter/${i.id}">chantier</a></td></tr>`).join('')}</tbody></table>`
+      :L.map(([i,x])=>`<a class="item" href="#/rapport/${i.id}"><div class="t"><b>${esc(x.num)} — ${esc(x.nom)}</b><small>${frD(x.date)}${x.lieu?' · '+esc(x.lieu):''}</small></div><div class="r">${esc(x.deb)}<small>${x.nb} forage${x.nb>1?'s':''}</small></div></a>`).join('');
+    tblClick($('#L'));$('#T').textContent=L.length+' rapport(s)'};
+  $('#q').oninput=draw;draw();
+  $('#newRap').onclick=()=>{if(CLOUD&&monRole==='lecture')return toast('Compte en lecture seule');
+    const i={id:uid(),clientId:'passager',date:today(),type:'essai',statut:'encours',lieu:'',description:'',employes:[]};S.interventions.push(i);save();go('#/rapport/'+i.id)};
+}
+
 /* ---------- Plus ---------- */
 function plus(){
   tab('plus');setHead('Plus');
@@ -769,7 +796,7 @@ function plus(){
     <a class="tile money-only" href="#/paie"><span>💰</span><b>Salaires du mois</b><small>Jours, acomptes, fiche PDF</small></a>
     <a class="tile money-only" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
     <a class="tile money-only" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
-    <a class="tile" href="#/rapport/libre"><span>📄</span><b>Rapport d'essai</b><small>Sans chantier</small></a>
+    <a class="tile" href="#/rapports"><span>📄</span><b>Rapports d'essai</b><small>${S.interventions.filter(rapFait).length} rapports</small></a>
     <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>${CLOUD&&session?'Compte, utilisateurs':'Société, sauvegarde'}</small></a>
     <a class="tile" href="#" id="demoTile"><span>👀</span><b>${DEMO?'Quitter la démo':'Voir la démo'}</b><small>${DEMO?'Retour à vos données':'1 an de données fictives'}</small></a>
   </div>`;
