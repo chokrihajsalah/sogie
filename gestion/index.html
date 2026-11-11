@@ -1013,8 +1013,8 @@ function params(){
   tab('plus');setHead('Paramètres',{back:'#/plus'});
   const st=S.settings;
   const cloud=CLOUD&&session;
-  V.innerHTML=`<div id="cloudBox"></div>${!cloud||monRole==='gerant'?`<div class="card"><h2>Société</h2>${fields(PAR_F,st)}<button class="primary" id="ok">Enregistrer</button></div>`:''}
-  ${cloud&&monRole!=='gerant'?'':`<div class="card"><h2>Sauvegarde</h2><p class="hint">${cloud?'Les données sont enregistrées en ligne et sur ce téléphone. Une sauvegarde en fichier reste possible pour garder une copie personnelle.':'Les données sont enregistrées uniquement sur ce téléphone. Faites une sauvegarde chaque semaine (envoyez-la-vous sur WhatsApp ou Gmail).'} ${st.lastBackup?'Dernière : '+frD(st.lastBackup.slice(0,10))+'.':'Aucune sauvegarde pour l’instant.'}</p>
+  V.innerHTML=`<div id="cloudBox"></div>${!cloud||isMgr()?`<div class="card"><h2>Société</h2>${fields(PAR_F,st)}<button class="primary" id="ok">Enregistrer</button></div>`:''}
+  ${cloud&&!isMgr()?'':`<div class="card"><h2>Sauvegarde</h2><p class="hint">${cloud?'Les données sont enregistrées en ligne et sur ce téléphone. Une sauvegarde en fichier reste possible pour garder une copie personnelle.':'Les données sont enregistrées uniquement sur ce téléphone. Faites une sauvegarde chaque semaine (envoyez-la-vous sur WhatsApp ou Gmail).'} ${st.lastBackup?'Dernière : '+frD(st.lastBackup.slice(0,10))+'.':'Aucune sauvegarde pour l’instant.'}</p>
   <button class="primary" id="bk">💾 Sauvegarder maintenant</button>
   <label>Restaurer une sauvegarde${cloud?' (ajoutée aux données en ligne)':''}<input type="file" id="rs" accept=".json,application/json"></label></div>`}
   <div class="card"><h2>Données</h2><p class="hint">${S.clients.length} clients · ${S.interventions.length} interventions · ${S.docs.length} devis/factures · ${S.articles.length} articles · ${S.employes.length} salariés</p>${cloud?'':'<button class="danger" id="wipe">Tout effacer</button>'}</div>`;
@@ -1032,7 +1032,8 @@ function params(){
 const SB_URL='https://pzjcoxchxyocpywbkfom.supabase.co',SB_KEY='sb_publishable_k8GIvRRNDBA2A9nqJ2RxdQ_2cXoK2d7';
 var CLOUD=!DEMO&&typeof window.supabase!=='undefined';
 const ARR=['clients','interventions','docs','paiements','articles','mouvements','employes','avances','caisse'];
-const ROLE_L={gerant:'Gérant',equipe:'Équipe',lecture:'Lecture seule',attente:'En attente'};
+const ROLE_L={admin:'Admin',gerant:'Gérant',equipe:'Équipe',lecture:'Lecture seule',attente:'En attente'};
+const isMgr=()=>monRole==='admin'||monRole==='gerant';
 const MONEY=['caisse','avances'];
 var sb=null,session=null,monRole=null,syncBusy=false,syncAgain=false,syncTimer=null,syncState='',syncErr='',chan=null;
 const SKEY=KEY+'-sync';
@@ -1042,7 +1043,7 @@ const saveSY=()=>{try{localStorage.setItem(SKEY,JSON.stringify(SY))}catch(e){}};
 function h53(str){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<str.length;i++){const c=str.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return (4294967296*(2097151&b)+(a>>>0)).toString(36)}
 const isRole=(...r)=>r.includes(monRole);
 const canSee=coll=>!(monRole==='equipe'&&MONEY.includes(coll));
-const canWrite=coll=>monRole==='gerant'||(monRole==='equipe'&&!MONEY.includes(coll)&&coll!=='settings');
+const canWrite=coll=>isMgr()||(monRole==='equipe'&&!MONEY.includes(coll)&&coll!=='settings');
 // État local → éléments synchronisés (clé « coll|id »)
 function items(){
   const M=new Map();
@@ -1117,7 +1118,7 @@ function loginView(msg){
   <label>Mot de passe<input id="lpass" type="password" autocomplete="current-password"></label>
   <button class="primary" id="lgo">Se connecter</button>
   <button class="ghost small" id="lforgot" style="align-self:flex-start">Mot de passe oublié ?</button></div>
-  <p class="hint">Le premier compte créé devient le compte du gérant. Les comptes suivants doivent être validés par le gérant (Paramètres → Utilisateurs).</p>
+  <p class="hint">Le premier compte créé devient l’administrateur. Les comptes suivants doivent être validés par l’administrateur (Paramètres → Utilisateurs).</p>
   <button class="ghost small" id="ldemo">👀 Voir la démo sans compte</button>`;
   let mode='in';
   V.querySelectorAll('#lmode button').forEach(b=>b.onclick=()=>{mode=b.dataset.m;V.querySelectorAll('#lmode button').forEach(x=>x.classList.toggle('on',x===b));$('#lnom').hidden=mode!=='up';$('#lgo').textContent=mode==='up'?'Créer le compte':'Se connecter';$('#lpass').autocomplete=mode==='up'?'new-password':'current-password'});
@@ -1133,7 +1134,7 @@ function loginView(msg){
 }
 function waitView(){
   document.body.classList.add('locked');tab('');setHead('En attente');
-  V.innerHTML=`<div class="card"><h2>Compte en attente</h2><p>Votre compte <b>${esc(session.user.email)}</b> est créé. Le gérant doit maintenant l’autoriser dans <b>Paramètres → Utilisateurs</b>.</p>
+  V.innerHTML=`<div class="card"><h2>Compte en attente</h2><p>Votre compte <b>${esc(session.user.email)}</b> est créé. L’administrateur doit maintenant l’autoriser dans <b>Paramètres → Utilisateurs</b>.</p>
   <button class="primary" onclick="location.reload()">J’ai été autorisé — actualiser</button><button id="lout">Se déconnecter</button></div>`;
   $('#lout').onclick=logout;
 }
@@ -1182,10 +1183,10 @@ async function cloudParams(box){
   box.innerHTML=`<div class="card"><h2>Compte</h2><p style="margin:0"><b>${esc(session.user.email)}</b> · ${ROLE_L[monRole]||''}</p>
     <p class="hint" id="syncInfo">${syncLabel()}</p>
     <div class="row"><button class="grow" id="syncGo">🔄 Synchroniser</button><button class="grow" id="pw">🔑 Mot de passe</button><button class="grow danger" id="lout">Se déconnecter</button></div></div>
-    ${monRole==='gerant'?'<div class="card"><h2>Utilisateurs</h2><div class="list" id="users"><div class="empty">Chargement…</div></div><p class="hint">Pour ajouter quelqu’un : il ouvre l’appli, touche « Créer un compte », puis vous choisissez ici son accès.<br>Gérant : tout · Équipe : tout sauf caisse, acomptes, salaires et bilan · Lecture seule : consulter sans modifier.</p></div>':''}`;
+    ${monRole==='admin'?'<div class="card"><h2>Utilisateurs</h2><div class="list" id="users"><div class="empty">Chargement…</div></div><p class="hint">Pour ajouter quelqu’un : il ouvre l’appli, touche « Créer un compte », puis vous choisissez ici son accès.<br>Admin : tout + gestion des comptes · Gérant : tout sauf les comptes · Équipe : sans caisse, acomptes, salaires ni bilan · Lecture seule : consulter sans modifier.</p></div>':''}`;
   $('#syncGo').onclick=()=>syncNow().then(()=>toast(syncState==='ok'?'Synchronisé':'Synchronisation impossible'));
   $('#pw').onclick=newPassword;$('#lout').onclick=logout;
-  if(monRole!=='gerant')return;
+  if(monRole!=='admin')return;
   const {data,error}=await sb.from('profils').select('user_id,email,nom,role,created_at').order('created_at');
   const U=$('#users');if(!U)return;
   if(error){U.innerHTML='<div class="empty">Impossible de charger les utilisateurs (connexion ?).</div>';return}
