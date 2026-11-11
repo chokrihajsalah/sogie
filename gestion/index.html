@@ -136,6 +136,7 @@ table.tbl td b{font-weight:600}
   .side a:hover{background:color-mix(in srgb,var(--brand) 8%,transparent)}
   .side a.on{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand-deep)}
   .side hr{border:0;border-top:1px solid var(--line);margin:8px 6px}
+  .side .grp{font:600 11px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:12px 12px 4px}
   .side .foot{padding:0 18px;font-size:12px;color:var(--muted)}
   header .mark{display:none}
   .wrap{max-width:1240px}
@@ -168,29 +169,32 @@ table.tbl td b{font-weight:600}
   <div class="brand">SOGEI <small>GESTION</small></div>
   <nav>
     <a href="#/" data-s="^#/?$"><span>🏠</span>Accueil</a>
+    <div class="grp">Activité</div>
+    <a href="#/interventions" data-s="^#/(interventions|inter/|activite)"><span>🔧</span>Chantiers</a>
+    <a href="#/rapports" data-s="^#/rapport"><span>📄</span>Rapports d'essai</a>
     <a href="#/clients" data-s="^#/client"><span>👥</span>Clients</a>
-    <a href="#/interventions" data-s="^#/(interventions|inter/)"><span>🔧</span>Chantiers</a>
-    <a href="#/docs" data-s="^#/doc"><span>🧾</span>Devis & factures</a>
-    <hr>
-    <a href="#/stock" data-s="^#/(stock|article)"><span>📦</span>Stock</a>
-    <a href="#/equipe" data-s="^#/(equipe|employe)"><span>👷</span>Équipe</a>
-    <a href="#/pointage" data-s="^#/pointage"><span>🕘</span>Pointage</a>
-    <a class="money-only" href="#/paie" data-s="^#/paie"><span>💰</span>Salaires</a>
+    <div class="grp">Finance</div>
+    <a href="#/docs" data-s="^#/(docs|doc/|doc-edit|finance)(?!.*f=bl)"><span>🧾</span>Devis & factures</a>
+    <a href="#/docs?f=bl" data-s="f=bl"><span>🚚</span>Bons de livraison</a>
     <a class="money-only" href="#/caisse" data-s="^#/caisse"><span>💵</span>Caisse</a>
     <a class="money-only" href="#/bilan" data-s="^#/bilan"><span>📊</span>Bilan 12 mois</a>
-    <a href="#/rapports" data-s="^#/rapport"><span>📄</span>Rapports d'essai</a>
+    <div class="grp">Ressources</div>
+    <a href="#/equipe" data-s="^#/(equipe|employe|ressources)"><span>👷</span>Équipe</a>
+    <a href="#/pointage" data-s="^#/pointage"><span>🕘</span>Pointage</a>
+    <a class="money-only" href="#/paie" data-s="^#/paie"><span>💰</span>Salaires</a>
+    <a href="#/stock" data-s="^#/(stock|article)"><span>📦</span>Stock</a>
     <hr>
-    <a href="#/params" data-s="^#/params"><span>⚙️</span>Paramètres</a>
+    <a href="#/params" data-s="^#/(params|plus)"><span>⚙️</span>Réglages</a>
   </nav>
   <div class="foot">Raccourcis : <span class="kbd">N</span> facture · <span class="kbd">/</span> rechercher</div>
 </aside>
 <main class="wrap" id="view"></main>
 <nav class="tabs" aria-label="Navigation"><div class="wrap">
   <a href="#/" data-tab="accueil"><span>🏠</span>Accueil</a>
-  <a href="#/clients" data-tab="clients"><span>👥</span>Clients</a>
-  <a href="#/interventions" data-tab="interventions"><span>🔧</span>Chantiers</a>
-  <a href="#/docs" data-tab="docs"><span>🧾</span>Factures</a>
-  <a href="#/plus" data-tab="plus"><span>☰</span>Plus</a>
+  <a href="#/activite" data-tab="activite"><span>🔧</span>Activité</a>
+  <a href="#/finance" data-tab="finance"><span>💰</span>Finance</a>
+  <a href="#/ressources" data-tab="ressources"><span>👷</span>Ressources</a>
+  <a href="#/plus" data-tab="plus"><span>⚙️</span>Réglages</a>
 </div></nav>
 <div id="toast" role="status"></div>
 
@@ -336,7 +340,11 @@ function setHead(title,{back,act}={}){
   const b=$('#back');b.hidden=!back;b.onclick=()=>{if(history.length>1)history.back();else location.hash=back};
   $('#hdrAct').innerHTML=act||'';
 }
-function tab(t){document.querySelectorAll('nav.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===t));const h=(location.hash||'#/').split('?')[0];document.querySelectorAll('.side a[data-s]').forEach(a=>a.classList.toggle('on',new RegExp(a.dataset.s).test(h)))}
+const CAT=[[/^#\/?$/,'accueil'],[/^#\/(activite|interventions|inter\/|rapport|client)/,'activite'],[/^#\/(finance|docs|doc\/|doc-edit|caisse|bilan)/,'finance'],[/^#\/(ressources|equipe|employe|pointage|paie|stock|article)/,'ressources'],[/^#\/(plus|params)/,'plus']];
+function catOf(h){const c=CAT.find(([re])=>re.test(h));return c?c[1]:''}
+function tab(){const full=location.hash||'#/',h=full.split('?')[0],t=catOf(h);document.querySelectorAll('nav.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===t));
+  let on=null;document.querySelectorAll('.side a[data-s]').forEach(a=>{a.classList.remove('on');if(!on&&new RegExp(a.dataset.s).test(a.dataset.s==='f=bl'?full:h))on=a});
+  if(/f=bl/.test(full))on=document.querySelector('.side a[data-s="f=bl"]');if(on)on.classList.add('on')}
 function confirmBtn(btn,fn){btn.onclick=()=>{if(btn.dataset.armed){fn();return}btn.dataset.armed=1;const o=btn.textContent;btn.textContent='Confirmer ?';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=o}},3000)}}
 const go=h=>{location.hash=h};
 
@@ -345,7 +353,7 @@ const routes=[
   [/^#\/clients$/,clients],[/^#\/client\/([\w-]+)$/,clientView],[/^#\/client-edit\/([\w-]+)$/,clientEdit],
   [/^#\/interventions$/,interventions],[/^#\/inter\/([\w-]+)$/,interEdit],
   [/^#\/docs$/,docs],[/^#\/doc\/([\w-]+)$/,docView],[/^#\/doc-edit\/([\w-]+)$/,docEdit],
-  [/^#\/plus$/,plus],
+  [/^#\/plus$/,plus],[/^#\/activite$/,catActivite],[/^#\/finance$/,catFinance],[/^#\/ressources$/,catRessources],
   [/^#\/stock$/,stock],[/^#\/article\/([\w-]+)$/,articleEdit],
   [/^#\/equipe$/,equipe],[/^#\/employe\/([\w-]+)$/,employeEdit],[/^#\/pointage$/,pointage],[/^#\/paie$/,paie],[/^#\/paie\/([\w-]+)$/,paieEmp],
   [/^#\/caisse$/,caisse],[/^#\/rapports$/,rapportsList],[/^#\/bilan$/,bilan],[/^#\/rapport\/([\w-]+)$/,rapport],[/^#\/params$/,params]
@@ -365,7 +373,7 @@ matchMedia('(min-width:1000px)').addEventListener('change',()=>{const h=location
 
 /* ---------- Accueil ---------- */
 function accueil(){
-  tab('accueil');setHead('Tableau de bord');
+  tab();setHead('Tableau de bord');
   const m=ym(today());
   const fact=S.docs.filter(d=>d.kind==='facture');
   const caMois=r3(fact.filter(d=>ym(d.date)===m).reduce((a,d)=>a+docTotals(d).ttc,0));
@@ -409,7 +417,7 @@ function clientItem(c){
   return `<a class="item" href="#/client/${c.id}"><div class="t"><b>${esc(c.nom)}</b><small>${esc([c.tel,c.adresse].filter(Boolean).join(' · '))||'—'}</small></div>${r>0?`<div class="r" style="color:var(--warn)">${dt(r)}<small>dû</small></div>`:''}</a>`;
 }
 function clients(){
-  tab('clients');setHead('Clients',{act:'<button class="small" onclick="location.hash=\'#/client-edit/new\'">+ Nouveau</button>'});
+  tab();setHead('Clients',{act:'<button class="small" onclick="location.hash=\'#/client-edit/new\'">+ Nouveau</button>'});
   V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un client, un téléphone…"><div class="card"><div class="list" id="L"></div></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort(sortC);
     if(WIDE()&&L.length){$('#L').innerHTML=`<table class="tbl"><thead><tr><th>Client</th><th>Téléphone</th><th>Adresse</th><th class="n">Chantiers</th><th class="n">Facturé TTC</th><th class="n">Reste dû</th></tr></thead><tbody>${L.map(c=>{const F=S.docs.filter(d=>d.kind==='facture'&&d.clientId===c.id),r=r3(F.reduce((a,d)=>a+reste(d),0));
@@ -419,7 +427,7 @@ function clients(){
 }
 const CLIENT_F=[{k:'nom',l:'Nom / raison sociale',full:1},{k:'tel',l:'Téléphone',t:'tel'},{k:'tel2',l:'Autre téléphone',t:'tel'},{k:'adresse',l:'Adresse / localité',full:1},{k:'gps',l:'Position GPS ou lien Maps',full:1,ph:'34.74, 10.76'},{k:'mf',l:'Matricule fiscal (si société)',full:1},{k:'notes',l:'Notes',t:'textarea'}];
 function clientEdit(id){
-  tab('clients');const isNew=id==='new';const c=isNew?{id:uid()}:Object.assign({},byId('clients',id));
+  tab();const isNew=id==='new';const c=isNew?{id:uid()}:Object.assign({},byId('clients',id));
   if(!isNew&&!c.nom)return go('#/clients');
   setHead(isNew?'Nouveau client':'Modifier client',{back:'#/clients'});
   V.innerHTML=`<div class="card">${fields(CLIENT_F,c)}<button class="ghost small" id="gpsBtn" style="align-self:flex-start">📍 Position actuelle</button></div>
@@ -434,7 +442,7 @@ function clientEdit(id){
     if(used){d.onclick=()=>toast('Client utilisé dans des chantiers ou factures : suppression impossible')}else confirmBtn(d,()=>{S.clients=S.clients.filter(x=>x.id!==id);save();go('#/clients')})}
 }
 function clientView(id){
-  tab('clients');const c=byId('clients',id);if(!c)return go('#/clients');
+  tab();const c=byId('clients',id);if(!c)return go('#/clients');
   setHead(c.nom,{back:'#/clients',act:`<button class="small" onclick="location.hash='#/client-edit/${id}'">Modifier</button>`});
   const inter=S.interventions.filter(i=>i.clientId===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const ds=S.docs.filter(d=>d.clientId===id).sort((a,b)=>b.date.localeCompare(a.date));
@@ -460,7 +468,7 @@ function interItem(i){const c=byId('clients',i.clientId);const f=i.factureId&&by
   return `<a class="item" href="#/inter/${i.id}"><div class="t"><b>${esc(typeL(i.type))} — ${esc(cName(i))}</b><small>${frD(i.date)}${i.lieu?' · '+esc(i.lieu):''}${(i.employes||[]).length?' · '+esc(i.employes.map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', ')):''}</small></div><div class="r">${f?'<span class="tag ok">Facturé</span>':statT(i.statut)}${rapFait(i)?'<small>📄 rapport</small>':''}</div></a>`}
 let interFilter='actives';
 function interventions(){
-  tab('interventions');setHead('Chantiers',{act:'<button class="small" onclick="location.hash=\'#/inter/new\'">+ Nouveau</button>'});
+  tab();setHead('Chantiers',{act:'<button class="small" onclick="location.hash=\'#/inter/new\'">+ Nouveau</button>'});
   const F=[['actives','En cours / à faire'],['afacturer','À facturer'],['tout','Tout']];
   V.innerHTML=`<div class="chips">${F.map(([k,l])=>`<button data-f="${k}" class="${interFilter===k?'on':''}">${l}</button>`).join('')}</div><input id="q" type="search" placeholder="Rechercher…"><div class="card"><div class="list" id="L"></div></div>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();
@@ -474,7 +482,7 @@ function interventions(){
   $('#q').oninput=draw;draw();
 }
 function interEdit(id){
-  tab('interventions');
+  tab();
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');
   const isNew=id.startsWith('new');
   const i=isNew?{id:uid(),date:today(),type:'essai',statut:'afaire',clientId:qs.get('c')||'passager',employes:[]}:JSON.parse(JSON.stringify(byId('interventions',id)||{}));
@@ -518,7 +526,7 @@ function docTable(L){
 function blTable(L){return `<table class="tbl"><thead><tr><th>N°</th><th>Date</th><th>Client</th><th>Articles livrés</th><th>État</th></tr></thead><tbody>${L.map(d=>{const [l,cl]=docEtat(d),f=d.factureId&&byId('docs',d.factureId);
   return `<tr class="go" data-h="#/doc/${d.id}"><td><b>${esc(d.num)}</b></td><td>${frD(d.date)}</td><td>${esc(cName(d))}</td><td>${esc(d.lignes.map(x=>String(x.qte).replace('.',',')+' × '+x.des).join(' · ').slice(0,90))}</td><td>${f?`<a class="tag ok" href="#/doc/${f.id}">${esc(f.num)}</a>`:`<span class="tag ${cl}">${l}</span>`}</td></tr>`}).join('')}</tbody></table>`}
 function docs(){
-  tab('docs');
+  tab();
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');if(qs.get('f'))docFilter=qs.get('f');
   setHead('Devis & factures',{act:'<button class="small" onclick="location.hash=\'#/doc-edit/new?k=facture\'">+ Facture</button>'});
   const F=[['factures','Factures'],['impayees','Impayées'],['devis','Devis'],['bl','Bons de livraison']];
@@ -532,7 +540,7 @@ function docs(){
   $('#q').oninput=draw;draw();
 }
 function docEdit(id){
-  tab('docs');
+  tab();
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');
   const isNew=id==='new';
   let d;
@@ -593,7 +601,7 @@ function docEdit(id){
     save();go('#/docs')});
 }
 function docView(id){
-  tab('docs');const d=byId('docs',id);if(!d)return go('#/docs');
+  tab();const d=byId('docs',id);if(!d)return go('#/docs');
   const c=byId('clients',d.clientId)||{},t=docTotals(d),isF=d.kind==='facture',isBL=d.kind==='bl',[el,ec]=docEtat(d);
   setHead((isBL?'BL ':KL[d.kind]+' ')+d.num,{back:'#/docs',act:`<button class="small" onclick="location.hash='#/doc-edit/${id}'">Modifier</button>`});
   const pays=S.paiements.filter(p=>p.docId===id).sort((a,b)=>a.date.localeCompare(b.date));
@@ -801,7 +809,7 @@ function rapInfo(i){const r=i.rapport||{},F=r.forages||[];
   const q=F.map(f=>f.debitPropose||f.debitTest).filter(Boolean).map(x=>String(x).replace('.',',')+' l/s');
   return {num:i.rapportNum||'',date:r.date||i.date||'',nom,lieu,nb:F.length,deb:q.join(' / '),prof:F.map(f=>f.profondeur).filter(Boolean).map(x=>x+' m').join(' / ')}}
 function rapportsList(){
-  tab('plus');setHead("Rapports d'essai",{act:'<button class="small" id="newRap">+ Nouveau</button>'});
+  tab();setHead("Rapports d'essai",{act:'<button class="small" id="newRap">+ Nouveau</button>'});
   numeroterRapports();
   V.innerHTML=`<input id="q" type="search" placeholder="Numéro, client, lieu…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div>
   <p class="hint">Chaque rapport est rattaché à un chantier. « + Nouveau » crée un chantier « Essai de débit » et ouvre son rapport. Pour envoyer le PDF : ouvrez le rapport puis « Envoyer le PDF ».</p>`;
@@ -812,33 +820,59 @@ function rapportsList(){
       :L.map(([i,x])=>`<a class="item" href="#/rapport/${i.id}"><div class="t"><b>${esc(x.num)} — ${esc(x.nom)}</b><small>${frD(x.date)}${x.lieu?' · '+esc(x.lieu):''}</small></div><div class="r">${esc(x.deb)}<small>${x.nb} forage${x.nb>1?'s':''}</small></div></a>`).join('');
     tblClick($('#L'));$('#T').textContent=L.length+' rapport(s)'};
   $('#q').oninput=draw;draw();
+  if(sessionStorage.getItem('newRap')){sessionStorage.removeItem('newRap');setTimeout(()=>$('#newRap')&&$('#newRap').click(),0)}
   $('#newRap').onclick=()=>{if(CLOUD&&monRole==='lecture')return toast('Compte en lecture seule');
     const i={id:uid(),clientId:'passager',date:today(),type:'essai',statut:'encours',lieu:'',description:'',employes:[]};S.interventions.push(i);save();go('#/rapport/'+i.id)};
 }
 
 /* ---------- Plus ---------- */
-function plus(){
-  tab('plus');setHead('Plus');
-  setTimeout(()=>{const t=$('#demoTile');if(t)t.onclick=e=>{e.preventDefault();try{DEMO?localStorage.removeItem('sogei-mode'):localStorage.setItem('sogei-mode','demo')}catch(_){}(history.replaceState(null,'','./#/'),location.reload())}});
+// Rubriques : une page par catégorie, avec le chiffre clé de chaque section
+function tiles(L){return `<div class="tiles">${L.filter(Boolean).map(t=>`<a class="tile${t.money?' money-only':''}" href="${t.h}"${t.id?` id="${t.id}"`:''}><span>${t.i}</span><b>${t.t}</b><small${t.warn?' style="color:var(--warn)"':''}>${t.s}</small></a>`).join('')}</div>`}
+function catActivite(){
+  tab();setHead('Activité');
+  const enc=S.interventions.filter(i=>i.statut==='afaire'||i.statut==='encours').length,afact=S.interventions.filter(i=>i.statut==='termine'&&!i.factureId).length;
+  V.innerHTML=`<div class="row"><a class="btn primary grow" href="#/inter/new">+ Chantier</a><a class="btn grow" href="#/rapports" onclick="sessionStorage.setItem('newRap',1)">+ Rapport</a><a class="btn grow" href="#/client-edit/new">+ Client</a></div>`+tiles([
+    {h:'#/interventions',i:'🔧',t:'Chantiers',s:enc+' en cours'+(afact?' · '+afact+' à facturer':'')},
+    {h:'#/rapports',i:'📄',t:"Rapports d'essai",s:S.interventions.filter(rapFait).length+' rapports'},
+    {h:'#/clients',i:'👥',t:'Clients',s:(S.clients.length-1)+' clients'}]);
+}
+function catFinance(){
+  tab();setHead('Finance');
+  const F=S.docs.filter(d=>d.kind==='facture'),imp=F.filter(d=>reste(d)>0.0005),ri=r3(imp.reduce((a,d)=>a+reste(d),0));
+  const dv=S.docs.filter(d=>d.kind==='devis'&&!d.factureId&&(d.statut||'brouillon')!=='refuse'&&!d.blId).length,bl=S.docs.filter(d=>d.kind==='bl'&&!d.factureId).length;
+  const solde=r3(journal().reduce((a,j)=>a+j.montant,0));
+  V.innerHTML=`<div class="row"><a class="btn primary grow" href="#/doc-edit/new?k=facture">+ Facture</a><a class="btn grow" href="#/doc-edit/new?k=devis">+ Devis</a><a class="btn grow" href="#/doc-edit/new?k=bl">+ BL</a></div>`+tiles([
+    {h:'#/docs?f=factures',i:'🧾',t:'Factures',s:F.length+' factures'},
+    {h:'#/docs?f=impayees',i:'⏳',t:'Impayées',s:imp.length?imp.length+' · '+dt(ri,0)+' DT':'Aucune',warn:imp.length>0},
+    {h:'#/docs?f=devis',i:'📝',t:'Devis',s:dv+' en attente'},
+    {h:'#/docs?f=bl',i:'🚚',t:'Bons de livraison',s:bl+' à facturer'},
+    {h:'#/caisse',i:'💵',t:'Caisse',s:'Solde '+dt(solde,0)+' DT',money:1},
+    {h:'#/bilan',i:'📊',t:'Bilan 12 mois',s:'Chiffre d’affaires',money:1}]);
+}
+function catRessources(){
+  tab();setHead('Ressources');
+  const act=S.employes.filter(e=>e.actif!==false),pt=S.pointage[today()]||{},np=act.filter(e=>!pt[e.id]).length;
   const bas=S.articles.filter(a=>a.seuil!==''&&a.seuil!=null&&stockOf(a)<=num(a.seuil)).length;
-  V.innerHTML=`<div class="tiles">
-    <a class="tile" href="#/stock"><span>📦</span><b>Stock</b><small>${S.articles.length} articles${bas?' · '+bas+' bas':''}</small></a>
-    <a class="tile" href="#/equipe"><span>👷</span><b>Équipe</b><small>${S.employes.filter(e=>e.actif!==false).length} salariés</small></a>
-    <a class="tile" href="#/pointage"><span>🕘</span><b>Pointage</b><small>Présences du jour</small></a>
-    <a class="tile money-only" href="#/paie"><span>💰</span><b>Salaires</b><small>Par semaine ou par mois</small></a>
-    <a class="tile money-only" href="#/caisse"><span>💵</span><b>Caisse</b><small>Entrées et dépenses</small></a>
-    <a class="tile money-only" href="#/bilan"><span>📊</span><b>Bilan 12 mois</b><small>Chiffre d’affaires, clients</small></a>
-    <a class="tile" href="#/rapports"><span>📄</span><b>Rapports d'essai</b><small>${S.interventions.filter(rapFait).length} rapports</small></a>
-    <a class="tile" href="#/params"><span>⚙️</span><b>Paramètres</b><small>${CLOUD&&session?'Compte, utilisateurs':'Société, sauvegarde'}</small></a>
-    <a class="tile" href="#" id="demoTile"><span>👀</span><b>${DEMO?'Quitter la démo':'Voir la démo'}</b><small>${DEMO?'Retour à vos données':'1 an de données fictives'}</small></a>
-  </div>`;
+  const P={mode:'mois',key:ym(today())},net=r3(act.reduce((a,e)=>a+recapPer(e,P).net,0));
+  V.innerHTML=`<div class="row"><a class="btn primary grow" href="#/pointage">🕘 Pointer aujourd’hui</a></div>`+tiles([
+    {h:'#/equipe',i:'👷',t:'Équipe',s:act.length+' salariés'},
+    {h:'#/pointage',i:'🕘',t:'Pointage',s:act.length?(np?np+' à pointer aujourd’hui':'Fait aujourd’hui'):'—',warn:np>0},
+    {h:'#/paie',i:'💰',t:'Salaires',s:'Net du mois : '+dt(net,0)+' DT',money:1},
+    {h:'#/stock',i:'📦',t:'Stock',s:S.articles.length+' articles'+(bas?' · '+bas+' bas':''),warn:bas>0}]);
+}
+function plus(){
+  tab();setHead('Réglages');
+  setTimeout(()=>{const t=$('#demoTile');if(t)t.onclick=e=>{e.preventDefault();try{DEMO?localStorage.removeItem('sogei-mode'):localStorage.setItem('sogei-mode','demo')}catch(_){}(history.replaceState(null,'','./#/'),location.reload())}});
+  V.innerHTML=tiles([
+    {h:'#/params',i:'⚙️',t:'Paramètres',s:CLOUD&&session?'Société, compte, utilisateurs':'Société, sauvegarde'},
+    {h:'#',id:'demoTile',i:'👀',t:DEMO?'Quitter la démo':'Voir la démo',s:DEMO?'Retour à vos données':'1 an de données fictives'}]);
 }
 
 /* ---------- Stock ---------- */
 function artItem(a){const s=stockOf(a),low=a.seuil!==''&&a.seuil!=null&&s<=num(a.seuil);
   return `<a class="item" href="#/article/${a.id}"><div class="t"><b>${esc(a.des)}</b><small>${esc(a.ref||'')}${a.pv?' · vente '+dt(num(a.pv))+' DT':''}</small></div><div class="r" style="color:${low?'var(--warn)':'inherit'}">${dt(s,s%1?2:0)}<small>${esc(a.unite||'u')}${low?' · bas':''}</small></div></a>`}
 function stock(){
-  tab('plus');setHead('Stock',{back:'#/plus',act:'<button class="small" onclick="location.hash=\'#/article/new\'">+ Article</button>'});
+  tab();setHead('Stock',{back:'#/ressources',act:'<button class="small" onclick="location.hash=\'#/article/new\'">+ Article</button>'});
   V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un article…"><div class="card"><div class="list" id="L"></div><p class="hint" id="T"></p></div><p class="hint">Les articles vendus sur une facture sortent automatiquement du stock.</p>`;
   const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.articles.filter(a=>(a.des+' '+(a.ref||'')).toLowerCase().includes(q)).sort((a,b)=>a.des.localeCompare(b.des));
     $('#L').innerHTML=L.map(artItem).join('')||`<div class="empty">${S.articles.length?'Aucun résultat.':'Aucun article. Ajoutez vos pompes, moteurs, câbles…'}</div>`;
@@ -847,7 +881,7 @@ function stock(){
 }
 const ART_F=[{k:'des',l:'Désignation',full:1,ph:'Pompe immergée 4" 1,5 HP'},{k:'ref',l:'Référence / marque'},{k:'unite',l:'Unité',t:'select',o:[['u','pièce'],['m','mètre'],['kg','kg'],['l','litre'],['lot','lot']]},{k:'pa',l:'Prix d’achat HT',t:'number'},{k:'pv',l:'Prix de vente HT',t:'number'},{k:'seuil',l:'Alerte si stock ≤',t:'number'}];
 function articleEdit(id){
-  tab('plus');const isNew=id==='new';const a=isNew?{id:uid(),unite:'u',stock0:'0'}:Object.assign({},byId('articles',id));if(!a.des&&!isNew)return go('#/stock');
+  tab();const isNew=id==='new';const a=isNew?{id:uid(),unite:'u',stock0:'0'}:Object.assign({},byId('articles',id));if(!a.des&&!isNew)return go('#/stock');
   setHead(isNew?'Nouvel article':a.des,{back:'#/stock'});
   const mv=S.mouvements.filter(m=>m.articleId===id).sort((x,y)=>y.date.localeCompare(x.date));
   V.innerHTML=`<div class="card">${fields(isNew?[...ART_F,{k:'stock0',l:'Quantité en stock aujourd’hui',t:'number'}]:ART_F,a)}</div>
@@ -869,14 +903,14 @@ function articleEdit(id){
 
 /* ---------- Équipe ---------- */
 function equipe(){
-  tab('plus');setHead('Équipe',{back:'#/plus',act:'<button class="small" onclick="location.hash=\'#/employe/new\'">+ Salarié</button>'});
+  tab();setHead('Équipe',{back:'#/ressources',act:'<button class="small" onclick="location.hash=\'#/employe/new\'">+ Salarié</button>'});
   const L=S.employes.slice().sort((a,b)=>(b.actif!==false)-(a.actif!==false)||a.nom.localeCompare(b.nom));
   V.innerHTML=`<div class="row"><a class="btn grow primary" href="#/pointage">🕘 Pointage</a><a class="btn grow" href="#/paie">💰 Salaires du mois</a></div>
   <div class="card"><div class="list">${L.map(e=>`<a class="item" href="#/employe/${e.id}"><div class="t"><b>${esc(e.nom)}${e.actif===false?' <span class="tag grey">Parti</span>':''}</b><small>${esc([e.poste,e.tel].filter(Boolean).join(' · '))}</small></div><div class="r">${e.salaire?dt(num(e.salaire))+'<small>DT / '+UNIT_L[e.type||'jour']+'</small>':''}</div></a>`).join('')||'<div class="empty">Aucun salarié.</div>'}</div></div>`;
 }
 const EMP_F=[{k:'nom',l:'Nom et prénom',full:1},{k:'poste',l:'Poste',ph:'Technicien, chauffeur…'},{k:'tel',l:'Téléphone',t:'tel'},{k:'type',l:'Payé',t:'select',o:[['jour','à la journée'],['semaine','à la semaine'],['mois','au mois']]},{k:'salaire',l:'Salaire (DT par jour / semaine / mois)',t:'number'},{k:'embauche',l:'Date d’embauche',t:'date'},{k:'actif',l:'Toujours dans l’entreprise',t:'check'}];
 function employeEdit(id){
-  tab('plus');const isNew=id==='new';const e=isNew?{id:uid(),type:'jour',actif:true}:Object.assign({},byId('employes',id));if(!e.nom&&!isNew)return go('#/equipe');
+  tab();const isNew=id==='new';const e=isNew?{id:uid(),type:'jour',actif:true}:Object.assign({},byId('employes',id));if(!e.nom&&!isNew)return go('#/equipe');
   setHead(isNew?'Nouveau salarié':e.nom,{back:'#/equipe'});
   const av=S.avances.filter(a=>a.empId===id).sort((a,b)=>b.date.localeCompare(a.date));
   V.innerHTML=`<div class="card">${fields(EMP_F,e)}</div>
@@ -892,8 +926,8 @@ function employeEdit(id){
 }
 let pDate=null;
 function pointage(){
-  tab('plus');pDate=pDate||today();
-  setHead('Pointage',{back:'#/plus'});
+  tab();pDate=pDate||today();
+  setHead('Pointage',{back:'#/ressources'});
   const emps=S.employes.filter(e=>e.actif!==false).sort((a,b)=>a.nom.localeCompare(b.nom));
   const p=S.pointage[pDate]||{};
   const d=new Date(pDate+'T12:00:00'),jour=(s=>s.charAt(0).toUpperCase()+s.slice(1))(d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}));
@@ -944,7 +978,7 @@ function perPicker(onChange){
   return h;
 }
 function paie(){
-  tab('plus');const P=perCur();setHead('Salaires',{back:'#/plus'});
+  tab();const P=perCur();setHead('Salaires',{back:'#/ressources'});
   const emps=S.employes.filter(e=>{const r=recapPer(e,P);return e.actif!==false||r.jours||r.av});
   const R=emps.map(e=>[e,recapPer(e,P)]);
   const tot=R.reduce((a,[,r])=>({du:a.du+r.du,av:a.av+r.av,net:a.net+r.net}),{du:0,av:0,net:0});
@@ -962,7 +996,7 @@ function paie(){
 // Fiche d'un salarié sur la période
 function joursMois(m){const [y,mo]=m.split('-').map(Number),n=new Date(y,mo,0).getDate();return Array.from({length:n},(_,k)=>m+'-'+String(k+1).padStart(2,'0'))}
 function paieEmp(id){
-  tab('plus');const P=perCur();const e=byId('employes',id);if(!e)return go('#/paie');
+  tab();const P=perCur();const e=byId('employes',id);if(!e)return go('#/paie');
   setHead(e.nom,{back:'#/paie'});
   const r=recapPer(e,P),J=perDays(P),set=new Set(J),first=(new Date(J[0]+'T12:00:00').getDay()+6)%7;
   const av=S.avances.filter(a=>a.empId===id&&set.has(a.date)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -1048,7 +1082,7 @@ let cMois=null;
 const CAT_OUT=['Carburant','Dépôt banque','Achat matériel','Pièces / fournitures','Salaire','Loyer','Électricité / eau','Téléphone','Entretien véhicule','Impôts / CNSS','Divers'];
 const CAT_IN=['Vente comptoir','Apport','Divers'];
 function caisse(){
-  tab('plus');cMois=cMois||ym(today());setHead('Caisse',{back:'#/plus'});
+  tab();cMois=cMois||ym(today());setHead('Caisse',{back:'#/finance'});
   const J=journal(),solde=r3(J.reduce((a,j)=>a+j.montant,0)),M=J.filter(j=>ym(j.date)===cMois);
   const inM=r3(M.filter(j=>j.montant>0).reduce((a,j)=>a+j.montant,0)),outM=r3(-M.filter(j=>j.montant<0).reduce((a,j)=>a+j.montant,0));
   V.innerHTML=`<div class="kpis"><div class="kpi"><small>Solde total</small><b class="money">${dt(solde)}</b><small>DT</small></div><div class="kpi"><small>${moisLabel(cMois)}</small><b class="money" style="font-size:17px;color:var(--ok)">+${dt(inM)}</b><b class="money" style="font-size:17px;color:var(--warn)">−${dt(outM)}</b></div></div>
@@ -1067,7 +1101,7 @@ function caisse(){
 
 /* ---------- Bilan 12 mois ---------- */
 function bilan(){
-  tab('plus');setHead('Bilan 12 mois',{back:'#/plus'});
+  tab();setHead('Bilan 12 mois',{back:'#/finance'});
   const now=new Date(today()+'T12:00:00'),M=[];
   for(let k=11;k>=0;k--){const d=new Date(now.getFullYear(),now.getMonth()-k,1);M.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'))}
   const fact=S.docs.filter(d=>d.kind==='facture'&&ym(d.date)>=M[0]);
@@ -1101,7 +1135,7 @@ function bilan(){
 /* ---------- Paramètres ---------- */
 const PAR_F=[{k:'societe',l:'Raison sociale',full:1},{k:'mf',l:'Matricule fiscal',full:1,ph:'0000000/X/A/M/000'},{k:'rc',l:'Registre de commerce'},{k:'rib',l:'RIB (sur les factures)'},{k:'tva',l:'TVA par défaut (%)',t:'number'},{k:'timbre',l:'Timbre fiscal (DT)',t:'number'},{k:'signataire',l:'Signataire'},{k:'fonction',l:'Fonction'},{k:'cachet',l:'Mettre le cachet et la signature sur les PDF',t:'check'}];
 function params(){
-  tab('plus');setHead('Paramètres',{back:'#/plus'});
+  tab();setHead('Paramètres',{back:'#/plus'});
   const st=S.settings;
   const cloud=CLOUD&&session;
   V.innerHTML=`<div id="cloudBox"></div>${!cloud||isMgr()?`<div class="card"><h2>Société</h2>${fields(PAR_F,st)}<button class="primary" id="ok">Enregistrer</button></div>`:''}
@@ -1200,7 +1234,7 @@ async function syncNow(){
 }
 // Écran de connexion / attente
 function loginView(msg){
-  document.body.classList.add('locked');tab('');setHead('Connexion');
+  document.body.classList.add('locked');tab();setHead('Connexion');
   V.innerHTML=`<div class="card"><h2>SOGEI Gestion</h2><p class="hint">Connectez-vous pour retrouver les données de l’entreprise sur ce téléphone.</p>
   ${msg?`<p style="margin:0;color:var(--warn)">${esc(msg)}</p>`:''}
   <div class="seg" id="lmode"><button class="on" data-m="in">Se connecter</button><button data-m="up">Créer un compte</button></div>
@@ -1224,7 +1258,7 @@ function loginView(msg){
     catch(e){toast(/Invalid login/i.test(e.message)?'E-mail ou mot de passe incorrect':/already registered/i.test(e.message)?'Ce compte existe déjà : connectez-vous':'Erreur : '+e.message);b.disabled=false;b.textContent=mode==='up'?'Créer le compte':'Se connecter'}};
 }
 function waitView(){
-  document.body.classList.add('locked');tab('');setHead('En attente');
+  document.body.classList.add('locked');tab();setHead('En attente');
   V.innerHTML=`<div class="card"><h2>Compte en attente</h2><p>Votre compte <b>${esc(session.user.email)}</b> est créé. L’administrateur doit maintenant l’autoriser dans <b>Paramètres → Utilisateurs</b>.</p>
   <button class="primary" onclick="location.reload()">J’ai été autorisé — actualiser</button><button id="lout">Se déconnecter</button></div>`;
   $('#lout').onclick=logout;
