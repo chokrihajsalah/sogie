@@ -58,6 +58,20 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute function public.nouveau_profil();
 
+-- Il faut toujours au moins un admin
+create or replace function public.garde_gerant() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if old.role = 'admin' and new.role <> 'admin'
+     and (select count(*) from public.profils where role = 'admin') <= 1 then
+    raise exception 'Il faut au moins un administrateur.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists garde_gerant on public.profils;
+create trigger garde_gerant before update on public.profils
+  for each row execute function public.garde_gerant();
+
 -- Profils des comptes déjà existants (si un compte a été créé avant ce script)
 insert into public.profils (user_id, email, nom, role)
 select u.id, u.email, split_part(u.email,'@',1), 'attente' from auth.users u
@@ -79,20 +93,6 @@ end $$;
 drop trigger if exists items_horodatage on public.items;
 create trigger items_horodatage before insert or update on public.items
   for each row execute function public.items_horodatage();
-
--- Il faut toujours au moins un admin
-create or replace function public.garde_gerant() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-  if old.role = 'admin' and new.role <> 'admin'
-     and (select count(*) from public.profils where role = 'admin') <= 1 then
-    raise exception 'Il faut au moins un administrateur.';
-  end if;
-  return new;
-end $$;
-drop trigger if exists garde_gerant on public.profils;
-create trigger garde_gerant before update on public.profils
-  for each row execute function public.garde_gerant();
 
 -- 5) Sécurité (RLS) --------------------------------------------------------
 alter table public.profils enable row level security;
@@ -133,6 +133,16 @@ grant select, insert, update on public.items   to authenticated;
 grant select, update         on public.profils to authenticated;
 grant select                 on public.reveil  to anon, authenticated;
 grant execute on function public.mon_role() to authenticated;
+-- Fonctions internes : pas appelables depuis l'extérieur
+revoke execute on function public.mon_role() from public, anon;
+revoke execute on function public.garde_gerant() from public, anon, authenticated;
+revoke execute on function public.nouveau_profil() from public, anon, authenticated;
+revoke execute on function public.items_horodatage() from public, anon, authenticated;
+do $$ begin
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.proname='rls_auto_enable') then
+    execute 'revoke execute on function public.rls_auto_enable() from public, anon, authenticated';
+  end if;
+end $$;
 
 -- 7) Temps réel : les autres téléphones sont prévenus des changements
 do $$ begin
