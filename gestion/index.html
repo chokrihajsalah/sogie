@@ -23,7 +23,8 @@
 [hidden]{display:none!important}
 .sync{width:12px;height:12px;border-radius:50%;background:#9aa8c2;flex:none;box-shadow:0 0 0 2px rgba(255,255,255,.5)}
 .sync.ok{background:#5cc28f}.sync.busy{background:#f0b44c}.sync.off{background:#cfd6e4}.sync.err{background:#ff6b5e}
-body.locked nav.tabs{display:none}
+body.locked nav.tabs,body.locked .side{display:none!important}
+@media (min-width:1000px){body.locked{padding-left:0}}
 body[data-role=equipe] .money-only{display:none!important}
 .ltot{min-height:44px;display:flex;align-items:center;justify-content:flex-end;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--body);padding-bottom:calc(78px + env(safe-area-inset-bottom,0px))}
@@ -113,6 +114,45 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
 .cal span.D{background:color-mix(in srgb,var(--amber) 20%,var(--card));border-color:transparent}
 .cal span.A{background:color-mix(in srgb,var(--warn) 16%,var(--card));border-color:transparent}
 .cal span.x{visibility:hidden}
+.side{display:none}
+table.tbl{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
+table.tbl th{text-align:left;font:600 12px var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:2px solid var(--line);white-space:nowrap}
+table.tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+table.tbl td.n,table.tbl th.n{text-align:right;white-space:nowrap}
+table.tbl tr.go{cursor:pointer}
+table.tbl tr.go:hover td{background:color-mix(in srgb,var(--brand) 7%,transparent)}
+table.tbl td b{font-weight:600}
+.duo{display:flex;flex-direction:column;gap:12px}
+.kbd{font:600 11px var(--body);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--muted)}
+@media (min-width:1000px){
+  body{padding-bottom:0;padding-left:232px}
+  nav.tabs{display:none}
+  .side{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:232px;background:var(--card);border-right:1px solid var(--line);z-index:7;padding:0 0 12px}
+  .side .brand{background:linear-gradient(180deg,#2f5496,#4472c4);color:#fff;height:56px;display:flex;align-items:center;gap:10px;padding:0 18px;font:700 22px/1 "Times New Roman",serif;letter-spacing:.04em}
+  .side .brand small{font:600 12px var(--display);letter-spacing:.1em;opacity:.85}
+  .side nav{display:flex;flex-direction:column;padding:10px 10px;gap:2px;overflow:auto;flex:1}
+  .side a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:9px;color:var(--fg);text-decoration:none;font-weight:600;font-size:15px}
+  .side a span{font-size:18px;width:22px;text-align:center}
+  .side a:hover{background:color-mix(in srgb,var(--brand) 8%,transparent)}
+  .side a.on{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand-deep)}
+  .side hr{border:0;border-top:1px solid var(--line);margin:8px 6px}
+  .side .foot{padding:0 18px;font-size:12px;color:var(--muted)}
+  header .mark{display:none}
+  .wrap{max-width:1240px}
+  main.wrap{padding-left:28px;padding-right:28px;padding-block:22px;gap:16px}
+  header .wrap{padding-left:28px;padding-right:28px}
+  .kpis{grid-template-columns:repeat(4,1fr)}
+  .tiles{grid-template-columns:repeat(4,1fr)}
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .duo>.duo{min-width:0;width:100%;align-items:stretch}
+  .line{grid-template-columns:4fr 1fr 1.3fr 1.3fr auto}
+  .line .des{grid-column:auto}
+  #toast{bottom:24px;left:calc(50% + 116px)}
+  #rapFrame{left:232px;width:calc(100% - 232px);height:calc(100vh - 56px);bottom:0}
+  .mob{display:none!important}
+}
+@media (max-width:999px){.desk{display:none!important}}
 @media (max-width:370px){.grid{grid-template-columns:1fr}.line{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -124,6 +164,26 @@ table.lines{width:100%;border-collapse:collapse;font-size:14px}
   <span id="hdrAct"></span>
   <a id="syncDot" class="sync" href="#/params" aria-label="État de la synchronisation" hidden></a>
 </div></header>
+<aside class="side" aria-label="Menu">
+  <div class="brand">SOGEI <small>GESTION</small></div>
+  <nav>
+    <a href="#/" data-s="^#/?$"><span>🏠</span>Accueil</a>
+    <a href="#/clients" data-s="^#/client"><span>👥</span>Clients</a>
+    <a href="#/interventions" data-s="^#/(interventions|inter/|rapport/(?!libre))"><span>🔧</span>Chantiers</a>
+    <a href="#/docs" data-s="^#/doc"><span>🧾</span>Devis & factures</a>
+    <hr>
+    <a href="#/stock" data-s="^#/(stock|article)"><span>📦</span>Stock</a>
+    <a href="#/equipe" data-s="^#/(equipe|employe)"><span>👷</span>Équipe</a>
+    <a href="#/pointage" data-s="^#/pointage"><span>🕘</span>Pointage</a>
+    <a class="money-only" href="#/paie" data-s="^#/paie"><span>💰</span>Salaires</a>
+    <a class="money-only" href="#/caisse" data-s="^#/caisse"><span>💵</span>Caisse</a>
+    <a class="money-only" href="#/bilan" data-s="^#/bilan"><span>📊</span>Bilan 12 mois</a>
+    <a href="#/rapport/libre" data-s="^#/rapport/libre"><span>📄</span>Rapport d'essai</a>
+    <hr>
+    <a href="#/params" data-s="^#/params"><span>⚙️</span>Paramètres</a>
+  </nav>
+  <div class="foot">Raccourcis : <span class="kbd">N</span> facture · <span class="kbd">/</span> rechercher</div>
+</aside>
 <main class="wrap" id="view"></main>
 <nav class="tabs" aria-label="Navigation"><div class="wrap">
   <a href="#/" data-tab="accueil"><span>🏠</span>Accueil</a>
@@ -281,7 +341,7 @@ function setHead(title,{back,act}={}){
   const b=$('#back');b.hidden=!back;b.onclick=()=>{if(history.length>1)history.back();else location.hash=back};
   $('#hdrAct').innerHTML=act||'';
 }
-function tab(t){document.querySelectorAll('nav.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===t))}
+function tab(t){document.querySelectorAll('nav.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.tab===t));const h=(location.hash||'#/').split('?')[0];document.querySelectorAll('.side a[data-s]').forEach(a=>a.classList.toggle('on',new RegExp(a.dataset.s).test(h)))}
 function confirmBtn(btn,fn){btn.onclick=()=>{if(btn.dataset.armed){fn();return}btn.dataset.armed=1;const o=btn.textContent;btn.textContent='Confirmer ?';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent=o}},3000)}}
 const go=h=>{location.hash=h};
 
@@ -304,6 +364,9 @@ function route(){
   go('#/');
 }
 addEventListener('hashchange',route);
+addEventListener('keydown',e=>{if(e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||document.body.classList.contains('locked'))return;
+  if(e.key==='/'){const q=$('#q');if(q){e.preventDefault();q.focus()}}else if(e.key==='n'||e.key==='N'){e.preventDefault();go('#/doc-edit/new?k=facture')}});
+matchMedia('(min-width:1000px)').addEventListener('change',()=>{const h=location.hash||'#/';if(!EDIT_RE.test(h.split('?')[0]))route()});
 
 /* ---------- Accueil ---------- */
 function accueil(){
@@ -331,9 +394,12 @@ function accueil(){
   h+=`<a class="btn money-only" href="#/bilan">📊 Bilan des 12 derniers mois</a>`;
   h+=`<div class="row"><a class="btn primary grow" href="#/inter/new">+ Chantier</a><a class="btn grow" href="#/doc-edit/new?k=devis">+ Devis</a><a class="btn grow" href="#/doc-edit/new?k=facture">+ Facture</a></div>`;
   if(actifs.length)h+=`<a class="card" href="#/pointage" style="text-decoration:none;color:inherit"><div class="row"><span class="grow">🕘 Pointage du jour</span>${nonPointes?`<span class="tag amber">${nonPointes} à pointer</span>`:'<span class="tag ok">Fait</span>'}</div></a>`;
+  h+='<div class="duo"><div class="duo" style="display:flex">';
   h+=`<div class="card"><h2>Chantiers en cours <a class="tag" href="#/interventions">Tout voir</a></h2><div class="list">${actives.slice(0,6).map(interItem).join('')||'<div class="empty">Aucun chantier en cours.</div>'}</div></div>`;
+  h+='</div><div class="duo" style="display:flex">';
   if(imp.length)h+=`<div class="card"><h2>Factures impayées</h2><div class="list">${imp.sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(docItem).join('')}</div></div>`;
   if(bas.length)h+=`<div class="card"><h2>Stock bas</h2><div class="list">${bas.map(artItem).join('')}</div></div>`;
+  h+='</div></div>';
   if(!DEMO&&!CLOUD&&S.docs.length===0)h+=`<div class="card"><h2>Découvrir l’appli</h2><p class="hint">Voir l’appli remplie avec un an d’activité fictive. Vos vraies données ne sont pas touchées.</p><button class="primary" id="demoOpen">👀 Voir la démo (1 an de données)</button></div>`;
   if(!S.clients.length)h+=`<div class="card"><h2>Bienvenue</h2><p class="hint">Commencez par compléter les informations de la société (matricule fiscal) dans <a href="#/params">Paramètres</a>, puis ajoutez vos salariés, vos articles en stock et vos clients.</p></div>`;
   V.innerHTML=h;
@@ -350,7 +416,10 @@ function clientItem(c){
 function clients(){
   tab('clients');setHead('Clients',{act:'<button class="small" onclick="location.hash=\'#/client-edit/new\'">+ Nouveau</button>'});
   V.innerHTML=`<input id="q" type="search" placeholder="Rechercher un client, un téléphone…"><div class="card"><div class="list" id="L"></div></div>`;
-  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort(sortC);$('#L').innerHTML=L.map(clientItem).join('')||`<div class="empty">${S.clients.length?'Aucun résultat.':'Aucun client. Touchez « + Nouveau ».'}</div>`};
+  const draw=()=>{const q=$('#q').value.toLowerCase();const L=S.clients.filter(c=>(c.nom+' '+c.tel+' '+c.adresse).toLowerCase().includes(q)).sort(sortC);
+    if(WIDE()&&L.length){$('#L').innerHTML=`<table class="tbl"><thead><tr><th>Client</th><th>Téléphone</th><th>Adresse</th><th class="n">Chantiers</th><th class="n">Facturé TTC</th><th class="n">Reste dû</th></tr></thead><tbody>${L.map(c=>{const F=S.docs.filter(d=>d.kind==='facture'&&d.clientId===c.id),r=r3(F.reduce((a,d)=>a+reste(d),0));
+      return `<tr class="go" data-h="#/client/${c.id}"><td><b>${esc(c.nom)}</b></td><td>${c.tel?`<a href="${telLink(c.tel)}">${esc(c.tel)}</a>`:''}</td><td>${esc(c.adresse||'')}</td><td class="n">${S.interventions.filter(i=>i.clientId===c.id).length}</td><td class="n">${dt(F.reduce((a,d)=>a+docTotals(d).ttc,0))}</td><td class="n" style="color:${r>0?'var(--warn)':'inherit'}">${r>0?dt(r):''}</td></tr>`}).join('')}</tbody></table>`;tblClick($('#L'));return}
+    $('#L').innerHTML=L.map(clientItem).join('')||`<div class="empty">${S.clients.length?'Aucun résultat.':'Aucun client. Touchez « + Nouveau ».'}</div>`};
   $('#q').oninput=draw;draw();
 }
 const CLIENT_F=[{k:'nom',l:'Nom / raison sociale',full:1},{k:'tel',l:'Téléphone',t:'tel'},{k:'tel2',l:'Autre téléphone',t:'tel'},{k:'adresse',l:'Adresse / localité',full:1},{k:'gps',l:'Position GPS ou lien Maps',full:1,ph:'34.74, 10.76'},{k:'mf',l:'Matricule fiscal (si société)',full:1},{k:'notes',l:'Notes',t:'textarea'}];
@@ -403,6 +472,8 @@ function interventions(){
     let L=S.interventions.filter(i=>{if(interFilter==='actives')return i.statut==='afaire'||i.statut==='encours';if(interFilter==='afacturer')return i.statut==='termine'&&!i.factureId;return true});
     L=L.filter(i=>{return (cName(i)+' '+typeL(i.type)+' '+(i.lieu||'')+' '+(i.description||'')).toLowerCase().includes(q)});
     L.sort((a,b)=>interFilter==='actives'?(a.date||'').localeCompare(b.date||''):(b.date||'').localeCompare(a.date||''));
+    if(WIDE()&&L.length){$('#L').innerHTML=`<table class="tbl"><thead><tr><th>Date</th><th>Type</th><th>Client</th><th>Lieu</th><th>Équipe</th><th>Rapport</th><th>État</th></tr></thead><tbody>${L.map(i=>{const f=i.factureId&&byId('docs',i.factureId);
+      return `<tr class="go" data-h="#/inter/${i.id}"><td>${frD(i.date)}</td><td><b>${esc(typeL(i.type))}</b></td><td>${esc(cName(i))}</td><td>${esc(i.lieu||'')}</td><td>${esc((i.employes||[]).map(e=>(byId('employes',e)||{}).nom).filter(Boolean).join(', '))}</td><td>${rapFait(i)?'📄':''}</td><td>${f?`<a class="tag ok" href="#/doc/${f.id}">${esc(f.num)}</a>`:statT(i.statut)}</td></tr>`}).join('')}</tbody></table>`;tblClick($('#L'));return}
     $('#L').innerHTML=L.map(interItem).join('')||'<div class="empty">Aucune intervention.</div>'};
   V.querySelectorAll('.chips button').forEach(b=>b.onclick=()=>{interFilter=b.dataset.f;interventions()});
   $('#q').oninput=draw;draw();
@@ -443,6 +514,11 @@ function interEdit(id){
 function docItem(d){const c=byId('clients',d.clientId),[l,cl]=docEtat(d),t=docTotals(d).ttc,r=d.kind==='facture'?reste(d):0;
   return `<a class="item" href="#/doc/${d.id}"><div class="t"><b>${esc(d.num)} — ${esc(cName(d))}</b><small>${d.kind==='devis'?'Devis':'Facture'} du ${frD(d.date)}</small></div><div class="r money">${dt(t)}<small><span class="tag ${cl}">${l}</span>${r>0.0005&&r<t-0.0005?' '+dt(r):''}</small></div></a>`}
 let docFilter='factures';
+const WIDE=()=>matchMedia('(min-width:1000px)').matches;
+function tblClick(root){root.querySelectorAll('tr[data-h]').forEach(tr=>tr.onclick=e=>{if(e.target.closest('a,button'))return;location.hash=tr.dataset.h})}
+function docTable(L){
+  return `<table class="tbl"><thead><tr><th>N°</th><th>Date</th><th>Client</th><th class="n">Total TTC</th><th class="n">Payé</th><th class="n">Reste</th><th>État</th></tr></thead><tbody>${L.map(d=>{const t=docTotals(d).ttc,[l,cl]=docEtat(d),isF=d.kind==='facture',p=isF?paye(d):0,r=isF?reste(d):0;
+    return `<tr class="go" data-h="#/doc/${d.id}"><td><b>${esc(d.num)}</b></td><td>${frD(d.date)}</td><td>${esc(cName(d))}</td><td class="n"><b>${dt(t)}</b></td><td class="n">${isF?dt(p):''}</td><td class="n" style="color:${r>0.0005?'var(--warn)':'inherit'}">${isF?dt(r):''}</td><td><span class="tag ${cl}">${l}</span></td></tr>`}).join('')}</tbody></table>`}
 function docs(){
   tab('docs');
   const qs=new URLSearchParams(location.hash.split('?')[1]||'');if(qs.get('f'))docFilter=qs.get('f');
@@ -452,7 +528,7 @@ function docs(){
   const draw=()=>{const q=$('#q').value.toLowerCase();
     let L=S.docs.filter(d=>docFilter==='devis'?d.kind==='devis':d.kind==='facture'&&(docFilter!=='impayees'||reste(d)>0.0005));
     L=L.filter(d=>{return (d.num+' '+cName(d)).toLowerCase().includes(q)}).sort((a,b)=>b.date.localeCompare(a.date)||b.num.localeCompare(a.num));
-    $('#L').innerHTML=L.map(docItem).join('')||'<div class="empty">Aucun document.</div>';
+    $('#L').innerHTML=L.length?(WIDE()?docTable(L):L.map(docItem).join('')):'<div class="empty">Aucun document.</div>';tblClick($('#L'));
     $('#T').textContent=L.length?L.length+' document(s) · total '+DT(L.reduce((a,d)=>a+(docFilter==='impayees'?reste(d):docTotals(d).ttc),0)):''};
   V.querySelectorAll('.chips button[data-f]').forEach(b=>b.onclick=()=>{docFilter=b.dataset.f;history.replaceState(null,'','#/docs');docs()});
   $('#q').oninput=draw;draw();
