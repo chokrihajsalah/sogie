@@ -210,7 +210,7 @@ const DEF={
 };
 let S;
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-const DEMO_V=2; // à augmenter quand demo.json change
+const DEMO_V=3; // à augmenter quand demo.json change
 const needDemo=DEMO&&(!S||typeof S!=='object'||!S.demoLoaded||S.demoV!==DEMO_V);
 if(!S||typeof S!=='object')S=JSON.parse(JSON.stringify(DEF));
 for(const k in DEF){if(S[k]===undefined)S[k]=JSON.parse(JSON.stringify(DEF[k]))}
@@ -558,7 +558,7 @@ function docEdit(id){
   if(isBL)HEAD.push({k:'livreur',l:'Livré par'});
   V.innerHTML=`<datalist id="arts">${S.articles.map(a=>`<option value="${esc(a.des)}">`).join('')}</datalist>
   <div class="card">${fields(HEAD,d)}<button class="ghost small" id="newC" style="align-self:flex-start">+ Nouveau client</button></div>
-  <div class="card"><h2>${isBL?'Articles livrés':'Lignes'} <span class="hint" style="text-transform:none;letter-spacing:0">${isBL?'quantités':'prix HT en DT'}</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
+  <div class="card"><h2>${isBL?'Matériel livré':'Lignes'} <span class="hint" style="text-transform:none;letter-spacing:0">${isBL?'quantités — sans main-d’œuvre':'prix HT en DT'}</span></h2><div id="LN" style="display:flex;flex-direction:column;gap:8px"></div><button id="addL">+ Ajouter une ligne</button></div>
   <div class="card"${isBL?' hidden':''}><div class="grid"><label>Remise (%)<input id="remise" inputmode="decimal" value="${esc(d.remise)}"></label><label>TVA (%)<input id="tva" inputmode="decimal" value="${esc(d.tva)}"></label>${isF?`<label>Timbre fiscal (DT)<input id="timbre" inputmode="decimal" value="${esc(d.timbre)}"></label>`:''}</div>
   <div class="totals" id="TOT"></div></div>
   <div class="card"><label>Notes (apparaissent sur le PDF)<textarea id="notes" placeholder="${isBL?'Observations, état du matériel…':'Conditions, garantie, délai…'}">${esc(d.notes||'')}</textarea></label></div>
@@ -616,7 +616,7 @@ function docView(id){
   <div class="row"><button class="primary grow" id="pdf">📤 Envoyer le PDF</button><button class="grow" id="see">👁 Aperçu</button></div>
   ${isF?`<div class="card"><h2>Paiements</h2><div class="list">${pays.map(p=>`<div class="item"><div class="t"><b>${DT(num(p.montant))}</b><small>${frD(p.date)} · ${esc(p.mode||'')}${p.note?' · '+esc(p.note):''}</small></div><button class="ghost danger small" data-dp="${p.id}">Supprimer</button></div>`).join('')||'<div class="empty">Aucun paiement.</div>'}</div>
     ${reste(d)>0.0005?`<div class="grid"><label>Montant<input id="pm" inputmode="decimal" value="${dt(reste(d)).replace(/\s/g,'')}"></label><label>Date<input id="pd" type="date" value="${today()}"></label><label>Mode<select id="pmode"><option>Espèces</option><option>Chèque</option><option>Virement</option><option>Traite</option></select></label><label>Note<input id="pn" placeholder="N° chèque…"></label></div><button id="addP">+ Enregistrer le paiement</button>`:''}</div>`
-  :isBL?`<div class="card"><h2>Suite</h2>${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button><p class="hint">Les prix sont repris du devis ou du stock ; vous pourrez les corriger. Le stock ne sera pas décompté une deuxième fois.</p>'}<button id="dup">Dupliquer ce bon</button></div>`
+  :isBL?`<div class="card"><h2>Suite</h2>${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button><p class="hint">La facture reprend le matériel livré et, s’il y a un devis, la main-d’œuvre et les services du devis. Vous pourrez ajouter ou corriger les lignes. Le stock ne sera pas décompté une deuxième fois.</p>'}<button id="dup">Dupliquer ce bon</button></div>`
   :`<div class="card"><h2>Suivi du devis</h2><div class="row">${[['brouillon','Brouillon'],['envoye','Envoyé'],['accepte','Accepté'],['refuse','Refusé']].map(([k,l])=>`<button class="small${(d.statut||'brouillon')===k?' primary':''}" data-st="${k}">${l}</button>`).join('')}</div>
     ${fa?'':'<button class="primary" id="toF">➜ Transformer en facture</button>'}${d.blId?'':'<button id="toBL">🚚 Faire le bon de livraison</button>'}<button id="dup">Dupliquer ce devis</button></div>`}
   <div id="prev" style="display:flex;flex-direction:column;gap:10px"></div>`;
@@ -627,14 +627,17 @@ function docView(id){
     if($('#addP'))$('#addP').onclick=()=>{const m=num($('#pm').value);if(m<=0)return toast('Montant invalide');S.paiements.push({id:uid(),docId:id,date:$('#pd').value||today(),montant:m,mode:$('#pmode').value,note:$('#pn').value.trim()});save();toast('Paiement enregistré');docView(id)};
   }else if(isBL){
     if($('#toF'))$('#toF').onclick=()=>{const src=d.fromDevis&&byId('docs',d.fromDevis);
-      const lignes=d.lignes.map(l=>{const m=src&&src.lignes.find(x=>x.des===l.des);const a=l.articleId&&byId('articles',l.articleId);return Object.assign({},l,{pu:l.pu||(m&&m.pu)||(a&&a.pv)||''})});
+      const mat=d.lignes.map(l=>{const m=src&&src.lignes.find(x=>x.des===l.des);const a=l.articleId&&byId('articles',l.articleId);return Object.assign({},l,{pu:(m&&m.pu)||l.pu||(a&&a.pv)||''})});
+      // matériel livré (quantités du BL) + lignes de service du devis (main-d'œuvre, transport…)
+      const serv=src?src.lignes.filter(x=>!x.articleId&&!d.lignes.some(l=>l.des===x.des)).map(x=>Object.assign({},x)):[];
+      const lignes=mat.concat(serv);
       const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes,tva:src?src.tva:S.settings.tva,timbre:S.settings.timbre,remise:src?src.remise:'',notes:'',fromBL:d.id,fromDevis:d.fromDevis||''};
       f.num=nextNum('facture',f.date);S.docs.push(f);d.factureId=f.id;if(src&&!src.factureId)src.factureId=f.id;
       if(f.interventionId){const it=byId('interventions',f.interventionId);if(it){it.factureId=f.id;it.statut='termine'}}
       applyStock(f);save();toast('Facture '+f.num+' créée — vérifiez les prix');go('#/doc-edit/'+f.id)};
     $('#dup').onclick=()=>{const n=JSON.parse(JSON.stringify(d));n.id=uid();n.date=today();n.num=nextNum('bl',n.date);delete n.factureId;delete n.fromDevis;S.docs.push(n);applyStock(n);save();toast('Bon '+n.num+' créé');go('#/doc-edit/'+n.id)};
   }else{
-    if($('#toBL'))$('#toBL').onclick=()=>{const b={id:uid(),kind:'bl',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:0,remise:d.remise,notes:'',fromDevis:d.id,livraison:''};
+    if($('#toBL'))$('#toBL').onclick=()=>{const mat=d.lignes.filter(l=>l.articleId);const b={id:uid(),kind:'bl',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(mat.length?mat:d.lignes)),tva:d.tva,timbre:0,remise:d.remise,notes:'',fromDevis:d.id,livraison:''};
       b.num=nextNum('bl',b.date);S.docs.push(b);d.blId=b.id;d.statut='accepte';applyStock(b);save();toast('Bon de livraison '+b.num+' créé');go('#/doc-edit/'+b.id)};
     V.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{d.statut=b.dataset.st;save();docView(id)});
     if($('#toF'))$('#toF').onclick=()=>{const f={id:uid(),kind:'facture',date:today(),clientId:d.clientId,nomLibre:d.nomLibre||'',telLibre:d.telLibre||'',interventionId:d.interventionId||'',lignes:JSON.parse(JSON.stringify(d.lignes)),tva:d.tva,timbre:S.settings.timbre,remise:d.remise,notes:d.notes,fromDevis:d.id};
