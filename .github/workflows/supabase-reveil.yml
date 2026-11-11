@@ -1,5 +1,5 @@
 # Réveil automatique de la base Supabase (évite la mise en pause après 7 jours sans activité).
-# Tourne tous les 2 jours. Ne fait rien tant que les secrets SUPABASE_URL et SUPABASE_ANON_KEY ne sont pas renseignés.
+# Tourne tous les 2 jours.
 name: Réveil Supabase
 
 on:
@@ -14,8 +14,9 @@ jobs:
     steps:
       - name: Interroger la base
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          # Adresse et clé publique (déjà visibles dans l'appli, ce ne sont pas des secrets)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://pzjcoxchxyocpywbkfom.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_k8GIvRRNDBA2A9nqJ2RxdQ_2cXoK2d7' }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
             echo "Supabase pas encore configuré : rien à faire."
